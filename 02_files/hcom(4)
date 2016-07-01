@@ -1,0 +1,3 @@
+BAIDU_SSP_define({"tuid" : "38378_0","queryid" : "18dd369c8a34dea6","placement" : {"basic" : {"cname":"ynnews_cpr","conBackEnv":1,"flowType":1,"groupId":28147,"mediumType":1,"rspFormat":1,"sellType":1,"sspId":8,"tuId":38378,"userId":2088556}
+,"container" : {"anchoredType":1,"floated":{"closeTime":0,"follow":0,"hspace":0,"trigger":1,"vspace":0},"height":0,"location":7,"sizeType":1,"width":0}
+,"fillstyle" : {},"userdefine" : "","complement_type" : 7},"extends" : "","pdb_deliv" : {"deliv_id" : "0","deliv_des" : {},"brandad" : 0},"order_deliv" : {"deliv_id" : "0","demand_id" : "0"},"rtb_deliv" : {"deliv_id" : "0","demand_id" : "0"}});

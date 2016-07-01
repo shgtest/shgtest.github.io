@@ -1,0 +1,364 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-Transitional.dtd">
+<!-- saved from url=(0324)http://netstat.yunnan.cn/test/comment_nolist.html?newsId=4413815&title=%u9EC4%u6BC5%u5728%u8FEA%u5E86%u8C03%u7814%u65F6%u5F3A%u8C03%20%u5728%u9020%u8840%u6276%u8D2B%u4E0A%u4E0B%u529F%u592B%20%u575A%u51B3%u6253%u8D62%u8131%u8D2B%u653B%u575A%u6218_%u4E91%u5357%u7F51&url=http://yn.yunnan.cn/html/2016-07/01/content_4413815.htm -->
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="zh" lang="zh-CN"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>云南网留言系统</title>
+
+<link href="./default.css" rel="stylesheet" type="text/css">
+<link href="./spread.css" rel="stylesheet" type="text/css">
+<link href="./mac_os_x.css" rel="stylesheet" type="text/css">
+<link href="./alert.css" rel="stylesheet" type="text/css">
+<style type="text/css">
+*
+{
+	margin:0px;
+	padding:0px;
+}
+body
+{
+	background-color: #fff;
+}
+input
+{
+	border: 1px #000 solid;
+}
+.challenge
+{
+	height: 15px;
+	border: 1px #000 solid;
+	background-color: #CCFFFF;
+}
+.comment_area
+{
+	width: 100%;
+	border: 1px #CDCAC7 solid;
+	background-color: #F9F9F9;
+	float:left;
+	color: #009900;
+	font-family:隶书;
+	font-size:16px;
+}
+.comment_list
+{
+	width: 100%;
+	border-bottom: dashed 1px #000;
+	margin: 0px;
+	padding: 10px;
+	background-color: #d8e3eb;
+}
+.comment_head
+{
+	width: 96%;
+	margin: 4px;
+	font-size: 12px;
+	color: #905b33;
+}
+.comment_body
+{
+	width: 95%;
+	margin: 10px;
+	padding: 10px;
+	background-color: #f4fbd2;
+	border: solid 1px #000;
+}
+.comment_foot
+{
+	width: 90%;
+	margin: 10px;
+	float: clear;
+	font-size: 13px;
+	text-align: right;
+}
+.page_index
+{
+	margin: 3px;
+	padding: 2px;
+	font-size: 13px;
+	background-color: #f4fbd2;
+	border: solid 1px #000;
+}
+.page_index_selected
+{
+	margin: 3px;
+	padding: 2px;
+	font-size: 13px;
+	background-color: #f0c2f8;
+	border: solid 1px #000;
+}
+.page_bar
+{
+	width: 90%;
+	height: 30px;
+	margin-top: 5px;
+	padding: 5px;
+	font-size: 13px;
+	float: clear;
+}
+a
+{
+	text-decoration:none;
+}
+#comment
+{
+	width: 100%;
+	height: auto;
+	float:left;
+	margin: 0px;
+	background-color:#fff;
+	font-size: 12px;
+}
+</style>
+
+<script type="text/javascript" src="./prototype.js"></script>
+<script type="text/javascript" src="./window.js"></script>
+<script type="text/javascript">
+	function getAntispam()
+	{
+	 /*get antispam chanllenge*/
+	    var url = 'comment.php';
+		var pars1 = 'parameter=antispam';
+		//alert(pars1);
+        var myAjax = new Ajax.Updater(
+                    {success: 'spam'},
+                    url,
+					{method: 'post', parameters: pars1, onFailure: reportError},{evalScripts:true});
+                    //{method: 'post', parameters: pars1, onFailure: reportError, onSuccess: showResponse});
+	}
+	
+	function postHTML1()
+    {
+		//alert(GetCookie('newsId'));
+		if($F('submitor')=='')alert('请填写您的昵称！');
+		else
+		{
+		Element.hide('sbmitbt');
+		Element.show('notice');
+		if (getLen($F('content'))>=800)
+		{
+		Dialog.alert("<center>字数超过400字的限制！</center>",{width:100, height:80});
+		}
+		else if(isEmpty($F('content'))&&getParameter('newsId')!=null)
+		{
+		var url = 'comment.php';
+		var c='';
+		if($F('submitor')!='')
+		{
+		$('owner').value=$F('submitor');
+		c=$F('submitor')+'说到:◇┼┼'+$F('content');
+		}
+		else c=$F('content');
+        var commentcaptcha = $F('commentcaptcha');
+		var pars = 'parameter=insert&content='+c+'&owner='+$F('owner')+'&artical_id='+getParameter('newsId')+'&critical_type=0&reply_to=0&artical_url='+getParameter('url')+'&artical_title='+getParameter('title')+'&commentcaptcha='+commentcaptcha;
+		//alert(pars);
+        var myAjax = new Ajax.Updater(
+                    {success: ''},
+                    url,
+                    {method: 'post', parameters: pars, onFailure: reportError, onSuccess: comment_success},{evalScripts:true});
+		
+		}
+		}
+
+    }
+
+
+	function page_open(pid)
+    {
+		if(getParameter('newsId')!=null)
+		{
+		var url = 'comment.php';
+		var pars = 'parameter=list&artical_id='+getParameter('newsId')+'&page='+pid;
+		//alert(pars);
+        var myAjax = new Ajax.Updater(
+                    {success: 'placeholder1'},
+                    url,
+                    {method: 'post', parameters: pars, onFailure: reportError},{evalScripts:true});
+		}
+
+    }
+	
+	function comment_success(data)
+	{
+        console.log(1);
+	  $('content').value='';
+	  Dialog.alert("<center>你的评论已成功提交!等待审核……</center>",{width:100, height:80});
+	  getAntispam();
+	  Element.hide('notice');
+	  Element.show('sbmitbt');
+	}
+
+	function reply_success()
+	{
+	  win.close();
+	  Dialog.alert("<center>你的回复已成功提交!等待审核……</center>",{width:100, height:80});
+	}
+
+	function impeach_success()
+	{
+	  win1.close();
+	  Dialog.alert("<center>你的举报已成功提交!我们会及时查看……</center>",{width:100, height:80});
+	}
+
+    function isEmpty(content)
+	{
+		var inputCheck = /^\s+$/;
+	    if(content==''||inputCheck.test(content))
+		{
+		Dialog.alert("<center>请不要空谈！</center>",{width:100, height:80});
+		Element.hide('notice');
+	    Element.show('sbmitbt');
+		}
+	    else return true;
+	}
+
+	function isNotSpam()
+	{
+		if($F('chanllenge')==$F('antispam_code'))return true;
+		else
+		{
+		Dialog.alert("验证码有误!",{width:100, height:80});
+		return false;
+		}
+	}
+
+    function showResponse(response)
+	{
+		alert(response.responseText);
+	}
+
+	function showDiv(divname)
+    {
+		$(divname).style.display='block';
+
+    }
+	function hideDiv(divname)
+    {
+		$(divname).style.display='none';
+
+    }
+
+    function reportError(request)
+    {
+        Dialog.alert('对不起，通讯故障，请稍候再试！',{width:100, height:130});
+    }
+
+	function getParameter(name) 
+    { 
+	var paramStr=location.search; 
+	if(paramStr.length==0)return null; 
+	if(paramStr.charAt(0)!='?')return null; 
+	paramStr=unescape(paramStr); 
+	paramStr=paramStr.substring(1); 
+	if(paramStr.length==0)return null; 
+	var params=paramStr.split('&'); 
+	for(var i=0;i<params.length;i++) 
+	{ 
+	var parts=params[i].split('=',2); 
+	if(parts[0]==name) 
+	{ 
+	if(parts.length<2||typeof(parts[1])=="undefined"||parts[1]=="undefined"||parts[1]=="null"||parts[1]=="")return null; 
+	return parts[1]; 
+	} 
+	} 
+	return null; 
+	}
+
+	function strip(str)
+	{
+	   str=str.replace(/&/g,'△');
+	   str=str.replace(/ /g,'┼');
+	   str=str.replace(/\?/g,'§');
+	   str=str.replace(/\r/g,'◇');
+	   str=str.replace(/#/g,'＃');
+	   str=str.replace(/%/g,'☆');
+	   return str;
+	}
+
+	function DelHtml(Word) 
+	{
+	a = Word.indexOf("<");
+	b = Word.indexOf(">");
+	len = Word.length;
+	c = Word.substring(0, a);
+	if(b == -1)
+	b = a;
+	d = Word.substring((b + 1), len);
+	Word = c + d;
+	tagCheck = Word.indexOf("<");
+	if(tagCheck != -1)
+	Word = DelHtml(Word);
+	return Word;
+	}
+
+	function GetCookie(name)
+	//获得Cookie的原始值
+	{
+	 arg = name + "=";
+	 alen = arg.length;
+	 clen = document.cookie.length;
+	 i = 0;
+	while (i < clen)
+	{
+	 j = i + alen;
+	if (document.cookie.substring(i, j) == arg)
+	return GetCookieVal (j);
+	i = document.cookie.indexOf(" ", i) + 1;
+	if (i == 0) break;
+	}
+	return null;
+	}
+
+	function getLen(str) {
+	var len = 0;
+	for (var i=0; i<str.length; i++) {
+		if (str.charCodeAt(i) > 127)
+		len++; //utf8格式下中文占3位，gb2312请修改位2位
+		else 
+		len+=2;
+		}
+	return len;
+	}
+
+    function changecaptcha(){
+        var r = Math.random();
+        $('captcha').setAttribute('src', 'captcha/captcha_ynw.php?r='+r);
+    }
+
+	getAntispam();
+	
+</script>
+</head>
+
+<body>
+<div id="comment">
+	<textarea class="comment_area" name="content" id="content" style="float: left; width: 98%; height: 125px;"></textarea>
+	<div style="clear:both;float:left;width:98%;margin-top:3px;">
+		<div style="float:left">
+			<div style="white-space:pre">昵  称：<input type="text" id="submitor" name="submitor" value="" style="width:110px;"></div>
+			<div style="margin-top:3px;">验证码：<input type="text" id="commentcaptcha" name="commentcaptcha" style="width:50px;"><img src="./captcha_ynw.php" id="captcha" alt="验证码"> <a href="javascript:changecaptcha()">换一张</a></div>
+		</div>
+		<div style="float:right;">
+			<span id="notice" style="display:none;font-size:12px;background-color:#FF6F6F;">正在提交...</span><a href="javascript:postHTML1();"><img id="sbmitbt" src="./tj.gif" width="48" height="21" border="0" alt="提交留言"></a>
+		</div>
+	</div>
+	<input type="hidden" id="owner" value="anonymous">
+	<input type="hidden" id="critical_type" value="0">
+	<input type="hidden" id="artical_id" value="">
+	<input type="hidden" id="reply_to" value="0">
+</div>
+<script type="text/javascript">
+var textareaheight = getParameter('th') || 125;
+document.getElementById('content').style.height = textareaheight + 'px';
+</script>
+
+
+
+
+<!--
+
+design&coding: 郑舟
+date：2007-11-02
+email: zznova82@yahoo.com.cn
+
+-->
+
+</body></html>
