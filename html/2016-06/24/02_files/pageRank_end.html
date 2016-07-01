@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<!-- saved from url=(0047)http://netstat.yunnan.cn/test/pageRank_end.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>新闻频道排行</title>
+<meta http-equiv="Content-language" content="zh-CN">
+<style type="text/css">
+body,h1,h2,h3,h4,h5,h6,dl,dt,dd,ul,ol,li,th,td,p,blockquote,pre,form,
+fieldset,legend,input,button,textarea,hr{margin:0;padding:0}
+li{list-style:none;text-align:left}
+fieldset,img{border:0;vertical-align: bottom}
+table{border-collapse:collapse;border-spacing:0}
+address,cite,dfn,em,var{font-style:normal}
+button,input,select,textarea{font-size:100%}
+body{background:#fff;text-align:center;font:12px/1.5 Georgia, "Times New Roman", "Microsoft YaHei", "微软雅黑", STXihei, "华文细黑", serif;}
+p{text-align:left;text-indent:24px;text-align:justify;text-justify:distribute}
+a{text-decoration:none}
+a,a:link,a:visited{color:#000}
+a:hover,a:active{color:#000;text-decoration:underline}
+
+.content{width:240px;float:left}
+.content li{width:100%;height:36px;border-bottom:2px dotted #aaa;font-size:14px;line-height:36px;text-indent:22px}
+.content li.p1{background:url(images/sn/num.jpg) no-repeat 4px 0}
+.content li.p2{background:url(images/sn/num.jpg) no-repeat 4px -38px}
+.content li.p3{background:url(images/sn/num.jpg) no-repeat 4px -76px}
+.content li.p4{background:url(images/sn/num.jpg) no-repeat 4px -114px}
+.content li.p5{background:url(images/sn/num.jpg) no-repeat 4px -152px}
+.content li.p6{background:url(images/sn/num.jpg) no-repeat 4px -190px}
+.content li.p7{background:url(images/sn/num.jpg) no-repeat 4px -228px}
+.content li.p8{background:url(images/sn/num.jpg) no-repeat 4px -266px}
+.content li.p9{background:url(images/sn/num.jpg) no-repeat 4px -304px}
+.content li.p10{background:url(images/sn/num.jpg) no-repeat 4px -342px}
+</style>
+</head>
+
+<body>
+<script type="text/javascript" src="./prototype.js"></script>
+	<script>
+		function hide_pr(hurl)
+    {
+		var url = 'update_title.php';
+		var pars = 'parameter=hide_pr&&url_pr='+hurl.replace(/\?/gi,'*$*');
+		//alert(pars);
+        var myAjax = new Ajax.Updater(
+                    {success: 'placeholder2'},
+                    url,
+					{method: 'post', parameters: pars, onFailure: reportError, onSuccess: replysucc},{evalScripts:true});
+                    //{method: 'post', parameters: pars, onFailure: reportError, onSuccess: showResponse});
+		
+    }
+	function reportError(request)
+    {
+        alert('Sorry. There was an error.',{width:200, height:130});
+    }
+	function replysucc()
+	{
+	alert('更新成功！')
+	}
+	</script>
+<ul class="content"><li class="p1"><a href="http://sj.yunnan.cn/article-yn-2016-06-28-4407670.html" target="_blank">幼儿园奇葩作业大盘点 3类作…</a></li><li class="p2"><a href="http://ccwb.yunnan.cn/html/2016-06/28/content_1072233.htm?div=-1" target="_blank">幼儿园奇葩作业大盘点</a></li><li class="p3"><a href="http://sj.yunnan.cn/article-society-2016-06-29-4409645.html" target="_blank">昆明一大学生教室偷拍女生裙底…</a></li><li class="p4"><a href="http://yn.yunnan.cn/html/2016-06/28/content_4407670.htm" target="_blank">幼儿园奇葩作业大盘点 3类作…</a></li><li class="p5"><a href="http://sj.yunnan.cn/article-society-2016-06-29-4409612.html" target="_blank">454万存款被转走储户打"飞…</a></li><li class="p6"><a href="http://yn.yunnan.cn/html/2016-06/29/content_4411278.htm" target="_blank">云南14轮巡视发现涉及领导干…</a></li><li class="p7"><a href="http://yn.yunnan.cn/html/2016-06/28/content_4409296.htm" target="_blank">云南省政协常委会议通过一批人…</a></li><li class="p8"><a href="http://ccwb.yunnan.cn/html/2016-06/29/content_1072665.htm?div=-1" target="_blank">学生营养餐惊爆腐败菜心…</a></li><li class="p9"><a href="http://yn.yunnan.cn/html/2012-07/13/content_2300802.htm" target="_blank">食人鱼在昆还有零星售卖_云南…</a></li><li class="p10"><a href="http://yn.yunnan.cn/html/2016-06/28/content_4409475.htm" target="_blank">高清组图：昆明市中考开考_云…</a></li></ul><!--generated date 2016-07-01 10:00:12-->
+</body></html>

@@ -1,0 +1,353 @@
+
+<!-- saved from url=(0323)http://netstat.yunnan.cn/test/comment_small.html?newsId=4413815&title=%u9EC4%u6BC5%u5728%u8FEA%u5E86%u8C03%u7814%u65F6%u5F3A%u8C03%20%u5728%u9020%u8840%u6276%u8D2B%u4E0A%u4E0B%u529F%u592B%20%u575A%u51B3%u6253%u8D62%u8131%u8D2B%u653B%u575A%u6218_%u4E91%u5357%u7F51&url=http://yn.yunnan.cn/html/2016-07/01/content_4413815.htm -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>云南网评论系统</title>
+<meta http-equiv="Content-language" content="zh-CN">
+<meta name="robots" content="index, follow">
+<meta name="googlebot" content="index, follow">
+<link rel="stylesheet" href="./css1.css" type="text/css" media="all">
+<link rel="stylesheet" href="./default.css" type="text/css">
+<link rel="stylesheet" href="./spread.css" type="text/css">
+<link rel="stylesheet" href="./mac_os_x.css" type="text/css">
+<link rel="stylesheet" href="./alert.css" type="text/css">
+
+
+<script type="text/javascript" src="./prototype.js"></script>
+<script type="text/javascript" src="./window.js"></script>
+<script type="text/javascript">
+
+  
+  	function list()
+    {
+		if(getParameter('newsId')!=null)
+		{
+		var url = 'comment_small.php';
+		var pars = 'parameter=list&artical_id='+getParameter('newsId');
+		//alert(pars);
+        var myAjax = new Ajax.Updater(
+                    {success: 'placeholder1'},
+                    url,
+					{method: 'post', parameters: pars, onFailure: reportError1},{evalScripts:true});
+                    //{method: 'post', parameters: pars, onFailure: reportError, onSuccess: showResponse});
+      	//getAntispam();
+		}
+
+    }
+
+	function getAntispam()
+	{
+	 /*get antispam chanllenge*/
+	    var url = 'comment_small.php';
+		var pars1 = 'parameter=antispam';
+		//alert(pars1);
+        var myAjax = new Ajax.Updater(
+                    {success: 'spam'},
+                    url,
+					{method: 'post', parameters: pars1, onFailure: reportError2},{evalScripts:true});
+                    //{method: 'post', parameters: pars1, onFailure: reportError, onSuccess: showResponse});
+	}
+	
+	function postHTML1()
+    {
+		//alert(GetCookie('newsId'));
+		if (getLen($F('content'))>=800)
+		{
+		Dialog.alert("字数超过限制！",{width:200, height:80});
+		}
+		else if(isEmpty($F('content'))&&getParameter('newsId')!=null&&isNotSpam())
+		{
+		var url = 'comment_small.php';
+		var pars = 'parameter=insert&content='+$F('content')+'&owner='+$F('owner')+'&artical_id='+getParameter('newsId')+'&critical_type=0&reply_to=0&artical_url='+getParameter('url')+'&artical_title='+getParameter('title');
+		//alert(pars);
+        var myAjax = new Ajax.Updater(
+                    {success: 'placeholder1'},
+                    url,
+                    {method: 'post', parameters: pars, onFailure: reportError3, onSuccess: comment_success},{evalScripts:true});
+		getAntispam();
+		}
+
+    }
+
+  	function postHTML2(cid)
+    {
+	if($F('replyer')=='')alert('请填写您的昵称！');
+	else
+	{
+	c=document.getElementById('reply_content');
+	o=document.getElementById('owner');
+	$('owner').value=$F('replyer');
+		if(isEmpty(c.value)&&(getParameter('newsId')!=null))
+		{
+		content=$F('replyer')+'说到:◇┼┼'+c.value;
+		var url = 'comment_small.php';
+		var pars = 'parameter=insert&content='+content+'&owner='+o.value+'&artical_id='+getParameter('newsId')+'&critical_type=0&reply_to='+cid+'&artical_url='+getParameter('url')+'&artical_title='+getParameter('title');
+		//alert(pars);
+        var myAjax = new Ajax.Updater(
+                    {success: 'placeholder1'},
+                    url,
+                    {method: 'post', parameters: pars, onFailure: reportError4, onSuccess: reply_success},{evalScripts:true});
+		}
+	}
+    }
+
+	function postHTML3(cid,pid)
+    {
+		if(isEmpty($F('impeach_content'))&&getParameter('newsId')!=null)
+		{
+		c=document.getElementById('impeach_content');
+		o=document.getElementById('owner');
+		var url = 'comment_small.php';
+		var pars = 'parameter=insert&content='+c.value+'&owner='+o.value+'&artical_id='+getParameter('newsId')+'&critical_type=3&reply_to='+cid+'&artical_url='+getParameter('url')+'&artical_title='+getParameter('title')+'&page='+pid;
+		//alert(pars);
+		
+        var myAjax = new Ajax.Updater(
+                    {success: 'placeholder1'},
+                    url,
+                    {method: 'post', parameters: pars, onFailure: reportError5, onSuccess: impeach_success},{evalScripts:true});
+		}
+
+    }
+
+	
+	function critical(cid,ctype,place)
+    {
+		if(getParameter('newsId')!=null)
+		{
+		var url = 'comment_small.php';
+		var pars = 'parameter=critical&content=__critical&owner='+$F('owner')+'&artical_id='+getParameter('newsId')+'&critical_type='+ctype+'&reply_to='+cid;
+		//alert(pars);
+        var myAjax = new Ajax.Updater(
+                    {success: place},
+                    url,
+                    {method: 'post', parameters: pars, onFailure: reportError6},{evalScripts:true});
+		}
+    }
+
+	function page_open(pid)
+    {
+		$('loading').innerHTML='正在加载...';
+		if(getParameter('newsId')!=null)
+		{
+		var url = 'comment_small.php';
+		var pars = 'parameter=list&artical_id='+getParameter('newsId')+'&page='+pid;
+		//alert(pars);
+        var myAjax = new Ajax.Updater(
+                    {success: 'placeholder1'},
+                    url,
+                    {method: 'post', parameters: pars, onFailure: reportError7,onSuccess: showloading},{evalScripts:true});
+		}
+    }
+
+	function showloading()
+	{
+	$('loading').innerHTML='';
+	window.scroll(0,0);
+	}
+	
+	function comment_success()
+	{
+	  $('content').value='';
+	  Dialog.alert("你的评论已成功提交!……",{width:200, height:80});
+	}
+
+	function reply_success()
+	{
+	  win.close();
+	  Dialog.alert("你的回复已成功提交!……",{width:200, height:80});
+	}
+
+	function impeach_success()
+	{
+	  win1.close();
+	  Dialog.alert("你的举报已成功提交!我们会及时查看……",{width:200, height:80});
+	}
+
+    function isEmpty(content)
+	{
+		var inputCheck = /^\s+$/;
+	    if(content==''||inputCheck.test(content))Dialog.alert("请不要空谈！",{width:200, height:80});	   
+	    else return true;
+	}
+
+	function isNotSpam()
+	{
+		if($F('chanllenge')==$F('antispam_code'))return true;
+		else
+		{
+		Dialog.alert("验证码有误!",{width:200, height:80});
+		return false;
+		}
+	}
+
+    function showResponse(response)
+	{
+		alert(response.responseText);
+	}
+
+	function showDiv(divname)
+    {
+		$(divname).style.display='block';
+
+    }
+	function hideDiv(divname)
+    {
+		$(divname).style.display='none';
+
+    }
+
+    function reportError1(request)
+    {
+        Dialog.alert('Sorry. There was an error.',{width:200, height:130});
+    }
+
+	function reportError2(request)
+    {
+        Dialog.alert('Sorry. There was an error.',{width:200, height:130});
+    }
+
+	function reportError3(request)
+    {
+        Dialog.alert('Sorry. There was an error.',{width:200, height:130});
+    }
+
+	function reportError4(request)
+    {
+        Dialog.alert('Sorry. There was an error.',{width:200, height:130});
+    }
+
+	function reportError5(request)
+    {
+        Dialog.alert('Sorry. There was an error.',{width:200, height:130});
+    }
+
+	function reportError6(request)
+    {
+        Dialog.alert('Sorry. There was an error.',{width:200, height:130});
+    }
+
+	function reportError7(request)
+    {
+        Dialog.alert('Sorry. There was an error.',{width:200, height:130});
+    }
+
+	function getParameter(name) 
+    { 
+	var paramStr=location.search; 
+	if(paramStr.length==0)return null; 
+	if(paramStr.charAt(0)!='?')return null; 
+	paramStr=unescape(paramStr); 
+	paramStr=paramStr.substring(1); 
+	if(paramStr.length==0)return null; 
+	var params=paramStr.split('&'); 
+	for(var i=0;i<params.length;i++) 
+	{ 
+	var parts=params[i].split('=',2); 
+	if(parts[0]==name) 
+	{ 
+	if(parts.length<2||typeof(parts[1])=="undefined"||parts[1]=="undefined"||parts[1]=="null"||parts[1]=="")return null; 
+	return parts[1]; 
+	} 
+	} 
+	return null; 
+	}
+
+	function reply_window(content,cid)
+	{
+	   Windows.closeAll();
+	   win = new Window({className: "dialog",  width:250, height:200, zIndex: 100, resizable: true, title: "引用回复", showEffectOptions: {duration:1.5}, draggable:true, wiredDrag: true, destroyOnClose: false})
+	   win.getContent().innerHTML= "<div style='padding:10px;font-size:12px;'><div id='quote_content'>"+DelHtml(content)+"</div><textarea id='reply_content' name='reply_content' style='width:95%;height:100px;'></textarea> <div style='width:80%;float:left;padding:10px;'>昵称：<input type='text' id='replyer' name='replyer' value='' style='width:60px;'></div><div style={float:right}><A HREF='javascript:postHTML2("+cid+");'><span style='color:#ffffff'}>提交</span></A></div></div>"
+       win.showCenter(); 
+	   	      
+	}
+
+	function strip(str)
+	{
+	   str=str.replace(/&/g,'△');
+	   str=str.replace(/ /g,'┼');
+	   str=str.replace(/\?/g,'§');
+	   str=str.replace(/\r/g,'◇');
+	   str=str.replace(/#/g,'＃');
+	   str=str.replace(/%/g,'☆');
+	   return str;
+	}
+
+	function DelHtml(Word) 
+	{
+	a = Word.indexOf("<");
+	b = Word.indexOf(">");
+	len = Word.length;
+	c = Word.substring(0, a);
+	if(b == -1)
+	b = a;
+	d = Word.substring((b + 1), len);
+	Word = c + d;
+	tagCheck = Word.indexOf("<");
+	if(tagCheck != -1)
+	Word = DelHtml(Word);
+	return Word;
+	}
+
+	function impeach_window(content,cid,pid)
+	{
+	   Windows.closeAll();
+	   win1 = new Window({className: "dialog",  width:250, height:200, zIndex: 100, resizable: true, title: "我要举报", showEffectOptions: {duration:1.5}, draggable:true, wiredDrag: true, destroyOnClose: false})
+	   win1.getContent().innerHTML= "<div style='padding:10px;font-size:12px;'><div class='quote_content'>"+DelHtml(content)+"</div><textarea name='impeach_content' style='width:95%;height:100px;'></textarea> <div style={float:right}><A HREF='javascript:postHTML3("+cid+","+pid+");'><span style='color:#ffffff'}>提交</span></A></div></div>"
+       win1.showCenter(); 
+	   	      
+	}
+
+	function GetCookie(name)
+	//获得Cookie的原始值
+	{
+	 arg = name + "=";
+	 alen = arg.length;
+	 clen = document.cookie.length;
+	 i = 0;
+	while (i < clen)
+	{
+	 j = i + alen;
+	if (document.cookie.substring(i, j) == arg)
+	return GetCookieVal (j);
+	i = document.cookie.indexOf(" ", i) + 1;
+	if (i == 0) break;
+	}
+	return null;
+	}
+
+	function getLen(str) {
+	var len = 0;
+	for (var i=0; i<str.length; i++) {
+		if (str.charCodeAt(i) > 127)
+		len++; //utf8格式下中文占3位，gb2312请修改位2位
+		else 
+		len+=2;
+		}
+	return len;
+	}
+
+	function title()
+	{
+    document.write('<center><a href="'+getParameter('url')+'"><span style={font-size:22px;font-weight:bolder;width:90%;line-height:30px}>'+getParameter('title')+'</span></a></center>');
+	}
+
+	list();
+    //document.write(getParameter('newsId'));
+</script>
+ </head>
+
+<body style="background-color:#fff;overflow:scroll;overflow-x:hidden">
+<div id="placeholder1"><div id="main"><div class="layer1"><div class="layer11small"><div class="layer13">共有：0条</div><div class="layer14"><img src="./syy.gif"></div><div class="layer16"><img src="./xyy.gif"></div></div><div id="loading"></div></div><div style="clear:both;margin:0px;margin-bottom:10px;padding:0px;"><div class="layer13">共有：0条</div><div class="layer14"><img src="./syy.gif"></div><div class="layer16"><img src="./xyy.gif"></div></div>
+</div></div>
+<input type="hidden" id="owner" name="owner" value="anonymous">
+<input type="hidden" id="critical_type" name="critical_type" value="0">
+<input type="hidden" id="artical_id" name="artical_id" value="">
+<input type="hidden" id="reply_to" name="reply_to" value="0">
+<!--
+design&coding: 郑舟
+date：2007-11-02
+email: zznova82@yahoo.com.cn
+-->
+
+
+</body></html>
