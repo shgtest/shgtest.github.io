@@ -1,1049 +1,4 @@
 /*
-Copyright 2013, KISSY v1.42
-MIT Licensed
-build time: Dec 6 15:30
-*/
-/*
- Combined processedModules by KISSY Module Compiler: 
-
- base
-*/
-
-KISSY.add("base", ["attribute"], function(S, require) {
-  var Attribute = require("attribute");
-  var ucfirst = S.ucfirst, ON_SET = "_onSet", noop = S.noop;
-  function __getHook(method, reverse) {
-    return function(origFn) {
-      return function wrap() {
-        var self = this;
-        if(reverse) {
-          origFn.apply(self, arguments)
-        }else {
-          self.callSuper.apply(self, arguments)
-        }
-        var extensions = arguments.callee.__owner__.__extensions__ || [];
-        if(reverse) {
-          extensions.reverse()
-        }
-        callExtensionsMethod(self, extensions, method, arguments);
-        if(reverse) {
-          self.callSuper.apply(self, arguments)
-        }else {
-          origFn.apply(self, arguments)
-        }
-      }
-    }
-  }
-  var Base = Attribute.extend({constructor:function() {
-    var self = this;
-    self.callSuper.apply(self, arguments);
-    var listeners = self.get("listeners");
-    for(var n in listeners) {
-      self.on(n, listeners[n])
-    }
-    self.initializer();
-    constructPlugins(self);
-    callPluginsMethod.call(self, "pluginInitializer");
-    self.bindInternal();
-    self.syncInternal()
-  }, initializer:noop, __getHook:__getHook, __callPluginsMethod:callPluginsMethod, bindInternal:function() {
-    var self = this, attrs = self.getAttrs(), attr, m;
-    for(attr in attrs) {
-      m = ON_SET + ucfirst(attr);
-      if(self[m]) {
-        self.on("after" + ucfirst(attr) + "Change", onSetAttrChange)
-      }
-    }
-  }, syncInternal:function() {
-    var self = this, cs = [], i, c = self.constructor, attrs = self.getAttrs();
-    while(c) {
-      cs.push(c);
-      c = c.superclass && c.superclass.constructor
-    }
-    cs.reverse();
-    for(i = 0;i < cs.length;i++) {
-      var ATTRS = cs[i].ATTRS || {};
-      for(var attributeName in ATTRS) {
-        if(attributeName in attrs) {
-          var attributeValue, onSetMethod;
-          var onSetMethodName = ON_SET + ucfirst(attributeName);
-          if((onSetMethod = self[onSetMethodName]) && attrs[attributeName].sync !== 0 && (attributeValue = self.get(attributeName)) !== undefined) {
-            onSetMethod.call(self, attributeValue)
-          }
-        }
-      }
-    }
-  }, plug:function(plugin) {
-    var self = this;
-    if(typeof plugin === "function") {
-      var Plugin = plugin;
-      plugin = new Plugin
-    }
-    if(plugin.pluginInitializer) {
-      plugin.pluginInitializer(self)
-    }
-    self.get("plugins").push(plugin);
-    return self
-  }, unplug:function(plugin) {
-    var plugins = [], self = this, isString = typeof plugin === "string";
-    S.each(self.get("plugins"), function(p) {
-      var keep = 0, pluginId;
-      if(plugin) {
-        if(isString) {
-          pluginId = p.get && p.get("pluginId") || p.pluginId;
-          if(pluginId !== plugin) {
-            plugins.push(p);
-            keep = 1
-          }
-        }else {
-          if(p !== plugin) {
-            plugins.push(p);
-            keep = 1
-          }
-        }
-      }
-      if(!keep) {
-        p.pluginDestructor(self)
-      }
-    });
-    self.setInternal("plugins", plugins);
-    return self
-  }, getPlugin:function(id) {
-    var plugin = null;
-    S.each(this.get("plugins"), function(p) {
-      var pluginId = p.get && p.get("pluginId") || p.pluginId;
-      if(pluginId === id) {
-        plugin = p;
-        return false
-      }
-      return undefined
-    });
-    return plugin
-  }, destructor:S.noop, destroy:function() {
-    var self = this;
-    if(!self.get("destroyed")) {
-      callPluginsMethod.call(self, "pluginDestructor");
-      self.destructor();
-      self.set("destroyed", true);
-      self.fire("destroy");
-      self.detach()
-    }
-  }});
-  S.mix(Base, {__hooks__:{initializer:__getHook(), destructor:__getHook("__destructor", true)}, ATTRS:{plugins:{value:[]}, destroyed:{value:false}, listeners:{value:[]}}, extend:function extend(extensions, px, sx) {
-    if(!S.isArray(extensions)) {
-      sx = px;
-      px = extensions;
-      extensions = []
-    }
-    sx = sx || {};
-    px = px || {};
-    var SubClass = Attribute.extend.call(this, px, sx);
-    SubClass.__extensions__ = extensions;
-    baseAddMembers.call(SubClass, {});
-    if(extensions.length) {
-      var attrs = {}, prototype = {};
-      S.each(extensions.concat(SubClass), function(ext) {
-        if(ext) {
-          S.each(ext.ATTRS, function(v, name) {
-            var av = attrs[name] = attrs[name] || {};
-            S.mix(av, v)
-          });
-          var exp = ext.prototype, p;
-          for(p in exp) {
-            if(exp.hasOwnProperty(p)) {
-              prototype[p] = exp[p]
-            }
-          }
-        }
-      });
-      SubClass.ATTRS = attrs;
-      prototype.constructor = SubClass;
-      S.augment(SubClass, prototype)
-    }
-    SubClass.extend = sx.extend || extend;
-    SubClass.addMembers = baseAddMembers;
-    return SubClass
-  }});
-  var addMembers = Base.addMembers;
-  function baseAddMembers(px) {
-    var SubClass = this;
-    var extensions = SubClass.__extensions__, hooks = SubClass.__hooks__, proto = SubClass.prototype;
-    if(extensions.length && hooks) {
-      for(var h in hooks) {
-        if(proto.hasOwnProperty(h) && !px.hasOwnProperty(h)) {
-          continue
-        }
-        px[h] = px[h] || noop
-      }
-    }
-    return addMembers.call(SubClass, px)
-  }
-  function onSetAttrChange(e) {
-    var self = this, method;
-    if(e.target === self) {
-      method = self[ON_SET + e.type.slice(5).slice(0, -6)];
-      method.call(self, e.newVal, e)
-    }
-  }
-  function constructPlugins(self) {
-    var plugins = self.get("plugins"), Plugin;
-    S.each(plugins, function(plugin, i) {
-      if(typeof plugin === "function") {
-        Plugin = plugin;
-        plugins[i] = new Plugin
-      }
-    })
-  }
-  function callPluginsMethod(method) {
-    var len, self = this, plugins = self.get("plugins");
-    if(len = plugins.length) {
-      for(var i = 0;i < len;i++) {
-        if(plugins[i][method]) {
-          plugins[i][method](self)
-        }
-      }
-    }
-  }
-  function callExtensionsMethod(self, extensions, method, args) {
-    var len;
-    if(len = extensions && extensions.length) {
-      for(var i = 0;i < len;i++) {
-        var fn = extensions[i] && (!method ? extensions[i] : extensions[i].prototype[method]);
-        if(fn) {
-          fn.apply(self, args || [])
-        }
-      }
-    }
-  }
-  S.Base = Base;
-  return Base
-});
-
-/*
-Copyright 2013, KISSY v1.42
-MIT Licensed
-build time: Dec 4 22:04
-*/
-/*
- Combined processedModules by KISSY Module Compiler: 
-
- attribute
-*/
-
-KISSY.add("attribute", ["event/custom"], function(S, require, exports, module) {
-  var RE_DASH = /(?:^|-)([a-z])/ig;
-  var CustomEvent = require("event/custom");
-  module.exports = Attribute;
-  var bind = S.bind;
-  function replaceToUpper() {
-    return arguments[1].toUpperCase()
-  }
-  function camelCase(name) {
-    return name.replace(RE_DASH, replaceToUpper)
-  }
-  var INVALID = {};
-  var FALSE = false;
-  function normalFn(host, method) {
-    if(typeof method === "string") {
-      return host[method]
-    }
-    return method
-  }
-  function getAttrVals(self) {
-    return self.__attrVals || (self.__attrVals = {})
-  }
-  function whenAttrChangeEventName(when, name) {
-    return when + S.ucfirst(name) + "Change"
-  }
-  function __fireAttrChange(self, when, name, prevVal, newVal, subAttrName, attrName, data) {
-    attrName = attrName || name;
-    return self.fire(whenAttrChangeEventName(when, name), S.mix({attrName:attrName, subAttrName:subAttrName, prevVal:prevVal, newVal:newVal}, data))
-  }
-  function ensureNonEmpty(obj, name, doNotCreate) {
-    var ret = obj[name];
-    if(!doNotCreate && !ret) {
-      obj[name] = ret = {}
-    }
-    return ret || {}
-  }
-  function getValueByPath(o, path) {
-    for(var i = 0, len = path.length;o !== undefined && i < len;i++) {
-      o = o[path[i]]
-    }
-    return o
-  }
-  function setValueByPath(o, path, val) {
-    var len = path.length - 1, s = o;
-    if(len >= 0) {
-      for(var i = 0;i < len;i++) {
-        o = o[path[i]]
-      }
-      if(o !== undefined) {
-        o[path[i]] = val
-      }else {
-        s = undefined
-      }
-    }
-    return s
-  }
-  function getPathNamePair(name) {
-    var path;
-    if(name.indexOf(".") !== -1) {
-      path = name.split(".");
-      name = path.shift()
-    }
-    return{path:path, name:name}
-  }
-  function getValueBySubValue(prevVal, path, value) {
-    var tmp = value;
-    if(path) {
-      if(prevVal === undefined) {
-        tmp = {}
-      }else {
-        tmp = S.clone(prevVal)
-      }
-      setValueByPath(tmp, path, value)
-    }
-    return tmp
-  }
-  function prepareDefaultSetFn(self, name) {
-    var defaultBeforeFns = ensureNonEmpty(self, "__defaultBeforeFns");
-    if(defaultBeforeFns[name]) {
-      return
-    }
-    defaultBeforeFns[name] = 1;
-    var beforeChangeEventName = whenAttrChangeEventName("before", name);
-    self.publish(beforeChangeEventName, {defaultFn:defaultSetFn})
-  }
-  function setInternal(self, name, value, opts, attrs) {
-    var path, subVal, prevVal, pathNamePair = getPathNamePair(name), fullName = name;
-    name = pathNamePair.name;
-    path = pathNamePair.path;
-    prevVal = self.get(name);
-    prepareDefaultSetFn(self, name);
-    if(path) {
-      subVal = getValueByPath(prevVal, path)
-    }
-    if(!opts.force) {
-      if(!path && prevVal === value) {
-        return undefined
-      }else {
-        if(path && subVal === value) {
-          return undefined
-        }
-      }
-    }
-    value = getValueBySubValue(prevVal, path, value);
-    var beforeEventObject = S.mix({attrName:name, subAttrName:fullName, prevVal:prevVal, newVal:value, _opts:opts, _attrs:attrs, target:self}, opts.data);
-    if(opts.silent) {
-      if(FALSE === defaultSetFn.call(self, beforeEventObject)) {
-        return FALSE
-      }
-    }else {
-      if(FALSE === self.fire(whenAttrChangeEventName("before", name), beforeEventObject)) {
-        return FALSE
-      }
-    }
-    return self
-  }
-  function defaultSetFn(e) {
-    if(e.target !== this) {
-      return undefined
-    }
-    var self = this, value = e.newVal, prevVal = e.prevVal, name = e.attrName, fullName = e.subAttrName, attrs = e._attrs, opts = e._opts;
-    var ret = self.setInternal(name, value);
-    if(ret === FALSE) {
-      return ret
-    }
-    if(!opts.silent) {
-      value = getAttrVals(self)[name];
-      __fireAttrChange(self, "after", name, prevVal, value, fullName, null, opts.data);
-      if(attrs) {
-        attrs.push({prevVal:prevVal, newVal:value, attrName:name, subAttrName:fullName})
-      }else {
-        __fireAttrChange(self, "", "*", [prevVal], [value], [fullName], [name], opts.data)
-      }
-    }
-    return undefined
-  }
-  function Attribute(config) {
-    var self = this, c = self.constructor;
-    self.userConfig = config;
-    while(c) {
-      addAttrs(self, c.ATTRS);
-      c = c.superclass ? c.superclass.constructor : null
-    }
-    initAttrs(self, config)
-  }
-  function wrapProtoForSuper(px, SubClass) {
-    var hooks = SubClass.__hooks__ || {};
-    for(var p in hooks) {
-      if(p in px) {
-        px[p] = hooks[p](px[p])
-      }
-    }
-    S.each(px, function(v, p) {
-      if(typeof v === "function") {
-        var wrapped = 0;
-        if(v.__owner__) {
-          var originalOwner = v.__owner__;
-          delete v.__owner__;
-          delete v.__name__;
-          wrapped = v.__wrapped__ = 1;
-          var newV = bind(v);
-          newV.__owner__ = originalOwner;
-          newV.__name__ = p;
-          originalOwner.prototype[p] = newV
-        }else {
-          if(v.__wrapped__) {
-            wrapped = 1
-          }
-        }
-        if(wrapped) {
-          px[p] = v = bind(v)
-        }
-        v.__owner__ = SubClass;
-        v.__name__ = p
-      }
-    })
-  }
-  function addMembers(px) {
-    var SubClass = this;
-    wrapProtoForSuper(px, SubClass);
-    S.mix(SubClass.prototype, px)
-  }
-  Attribute.extend = function extend(px, sx) {
-    var SubClass, SuperClass = this;
-    sx = sx || {};
-    px = px || {};
-    var hooks, sxHooks = sx.__hooks__;
-    if(hooks = SuperClass.__hooks__) {
-      sxHooks = sx.__hooks__ = sx.__hooks__ || {};
-      S.mix(sxHooks, hooks, false)
-    }
-    var name = sx.name || "AttributeDerived";
-    if(px.hasOwnProperty("constructor")) {
-      SubClass = px.constructor
-    }else {
-      if("@DEBUG@") {
-        SubClass = (new Function("return function " + camelCase(name) + "(){ " + "this.callSuper.apply(this, arguments);" + "}"))()
-      }else {
-        SubClass = function() {
-          this.callSuper.apply(this, arguments)
-        }
-      }
-    }
-    px.constructor = SubClass;
-    SubClass.__hooks__ = sxHooks;
-    wrapProtoForSuper(px, SubClass);
-    var inheritedStatics, sxInheritedStatics = sx.inheritedStatics;
-    if(inheritedStatics = SuperClass.inheritedStatics) {
-      sxInheritedStatics = sx.inheritedStatics = sx.inheritedStatics || {};
-      S.mix(sxInheritedStatics, inheritedStatics, false)
-    }
-    S.extend(SubClass, SuperClass, px, sx);
-    if(sxInheritedStatics) {
-      S.mix(SubClass, sxInheritedStatics)
-    }
-    SubClass.extend = sx.extend || extend;
-    SubClass.addMembers = addMembers;
-    return SubClass
-  };
-  function addAttrs(host, attrs) {
-    if(attrs) {
-      for(var attr in attrs) {
-        host.addAttr(attr, attrs[attr], false)
-      }
-    }
-  }
-  function initAttrs(host, config) {
-    if(config) {
-      for(var attr in config) {
-        host.setInternal(attr, config[attr])
-      }
-    }
-  }
-  S.augment(Attribute, CustomEvent.Target, {INVALID:INVALID, callSuper:function() {
-    var method, obj, self = this, args = arguments;
-    if(typeof self === "function" && self.__name__) {
-      method = self;
-      obj = args[0];
-      args = Array.prototype.slice.call(args, 1)
-    }else {
-      method = arguments.callee.caller;
-      if(method.__wrapped__) {
-        method = method.caller
-      }
-      obj = self
-    }
-    var name = method.__name__;
-    if(!name) {
-      return undefined
-    }
-    var member = method.__owner__.superclass[name];
-    if(!member) {
-      return undefined
-    }
-    return member.apply(obj, args || [])
-  }, getAttrs:function() {
-    return this.__attrs || (this.__attrs = {})
-  }, getAttrVals:function() {
-    var self = this, o = {}, a, attrs = self.getAttrs();
-    for(a in attrs) {
-      o[a] = self.get(a)
-    }
-    return o
-  }, addAttr:function(name, attrConfig, override) {
-    var self = this, attrs = self.getAttrs(), attr, cfg = S.clone(attrConfig);
-    if(attr = attrs[name]) {
-      S.mix(attr, cfg, override)
-    }else {
-      attrs[name] = cfg
-    }
-    return self
-  }, addAttrs:function(attrConfigs, initialValues) {
-    var self = this;
-    S.each(attrConfigs, function(attrConfig, name) {
-      self.addAttr(name, attrConfig)
-    });
-    if(initialValues) {
-      self.set(initialValues)
-    }
-    return self
-  }, hasAttr:function(name) {
-    return this.getAttrs().hasOwnProperty(name)
-  }, removeAttr:function(name) {
-    var self = this;
-    var __attrVals = getAttrVals(self);
-    var __attrs = self.getAttrs();
-    if(self.hasAttr(name)) {
-      delete __attrs[name];
-      delete __attrVals[name]
-    }
-    return self
-  }, set:function(name, value, opts) {
-    var self = this, e;
-    if(S.isPlainObject(name)) {
-      opts = value;
-      opts = opts || {};
-      var all = Object(name), attrs = [], errors = [];
-      for(name in all) {
-        if((e = validate(self, name, all[name], all)) !== undefined) {
-          errors.push(e)
-        }
-      }
-      if(errors.length) {
-        if(opts.error) {
-          opts.error(errors)
-        }
-        return FALSE
-      }
-      for(name in all) {
-        setInternal(self, name, all[name], opts, attrs)
-      }
-      var attrNames = [], prevVals = [], newVals = [], subAttrNames = [];
-      S.each(attrs, function(attr) {
-        prevVals.push(attr.prevVal);
-        newVals.push(attr.newVal);
-        attrNames.push(attr.attrName);
-        subAttrNames.push(attr.subAttrName)
-      });
-      if(attrNames.length) {
-        __fireAttrChange(self, "", "*", prevVals, newVals, subAttrNames, attrNames, opts.data)
-      }
-      return self
-    }
-    opts = opts || {};
-    e = validate(self, name, value);
-    if(e !== undefined) {
-      if(opts.error) {
-        opts.error(e)
-      }
-      return FALSE
-    }
-    return setInternal(self, name, value, opts)
-  }, setInternal:function(name, value) {
-    var self = this, setValue, attrConfig = ensureNonEmpty(self.getAttrs(), name), setter = attrConfig.setter;
-    if(setter && (setter = normalFn(self, setter))) {
-      setValue = setter.call(self, value, name)
-    }
-    if(setValue === INVALID) {
-      return FALSE
-    }
-    if(setValue !== undefined) {
-      value = setValue
-    }
-    getAttrVals(self)[name] = value;
-    return undefined
-  }, get:function(name) {
-    var self = this, dot = ".", path, attrVals = getAttrVals(self), attrConfig, getter, ret;
-    if(name.indexOf(dot) !== -1) {
-      path = name.split(dot);
-      name = path.shift()
-    }
-    attrConfig = ensureNonEmpty(self.getAttrs(), name, 1);
-    getter = attrConfig.getter;
-    ret = name in attrVals ? attrVals[name] : getDefAttrVal(self, name);
-    if(getter && (getter = normalFn(self, getter))) {
-      ret = getter.call(self, ret, name)
-    }
-    if(!(name in attrVals) && ret !== undefined) {
-      attrVals[name] = ret
-    }
-    if(path) {
-      ret = getValueByPath(ret, path)
-    }
-    return ret
-  }, reset:function(name, opts) {
-    var self = this;
-    if(typeof name === "string") {
-      if(self.hasAttr(name)) {
-        return self.set(name, getDefAttrVal(self, name), opts)
-      }else {
-        return self
-      }
-    }
-    opts = name;
-    var attrs = self.getAttrs(), values = {};
-    for(name in attrs) {
-      values[name] = getDefAttrVal(self, name)
-    }
-    self.set(values, opts);
-    return self
-  }});
-  function getDefAttrVal(self, name) {
-    var attrs = self.getAttrs(), attrConfig = ensureNonEmpty(attrs, name, 1), valFn = attrConfig.valueFn, val;
-    if(valFn && (valFn = normalFn(self, valFn))) {
-      val = valFn.call(self);
-      if(val !== undefined) {
-        attrConfig.value = val
-      }
-      delete attrConfig.valueFn;
-      attrs[name] = attrConfig
-    }
-    return attrConfig.value
-  }
-  function validate(self, name, value, all) {
-    var path, prevVal, pathNamePair;
-    pathNamePair = getPathNamePair(name);
-    name = pathNamePair.name;
-    path = pathNamePair.path;
-    if(path) {
-      prevVal = self.get(name);
-      value = getValueBySubValue(prevVal, path, value)
-    }
-    var attrConfig = ensureNonEmpty(self.getAttrs(), name), e, validator = attrConfig.validator;
-    if(validator && (validator = normalFn(self, validator))) {
-      e = validator.call(self, value, name, all);
-      if(e !== undefined && e !== true) {
-        return e
-      }
-    }
-    return undefined
-  }
-});
-
-/*
-Copyright 2013, KISSY v1.42
-MIT Licensed
-build time: Dec 4 22:15
-*/
-/*
- Combined processedModules by KISSY Module Compiler: 
-
- event/custom/observer
- event/custom/object
- event/custom/observable
- event/custom/target
- event/custom
-*/
-
-KISSY.add("event/custom/observer", ["event/base"], function(S, require) {
-  var BaseEvent = require("event/base");
-  function CustomEventObserver() {
-    CustomEventObserver.superclass.constructor.apply(this, arguments)
-  }
-  S.extend(CustomEventObserver, BaseEvent.Observer, {keys:["fn", "context", "groups"]});
-  return CustomEventObserver
-});
-KISSY.add("event/custom/object", ["event/base"], function(S, require) {
-  var BaseEvent = require("event/base");
-  function CustomEventObject(data) {
-    CustomEventObject.superclass.constructor.call(this);
-    S.mix(this, data)
-  }
-  S.extend(CustomEventObject, BaseEvent.Object);
-  return CustomEventObject
-});
-KISSY.add("event/custom/observable", ["event/base", "./observer", "./object"], function(S, require) {
-  var BaseEvent = require("event/base");
-  var CustomEventObserver = require("./observer");
-  var CustomEventObject = require("./object");
-  var Utils = BaseEvent.Utils;
-  function CustomEventObservable() {
-    var self = this;
-    CustomEventObservable.superclass.constructor.apply(self, arguments);
-    self.defaultFn = null;
-    self.defaultTargetOnly = false;
-    self.bubbles = true
-  }
-  S.extend(CustomEventObservable, BaseEvent.Observable, {on:function(cfg) {
-    var observer = new CustomEventObserver(cfg);
-    if(S.Config.debug) {
-      if(!observer.fn) {
-        S.error("lack event handler for " + this.type)
-      }
-    }
-    if(this.findObserver(observer) === -1) {
-      this.observers.push(observer)
-    }
-  }, fire:function(eventData) {
-    eventData = eventData || {};
-    var self = this, bubbles = self.bubbles, currentTarget = self.currentTarget, parents, parentsLen, type = self.type, defaultFn = self.defaultFn, i, customEventObject = eventData, gRet, ret;
-    eventData.type = type;
-    if(!(customEventObject instanceof CustomEventObject)) {
-      customEventObject.target = currentTarget;
-      customEventObject = new CustomEventObject(customEventObject)
-    }
-    customEventObject.currentTarget = currentTarget;
-    ret = self.notify(customEventObject);
-    if(gRet !== false && ret !== undefined) {
-      gRet = ret
-    }
-    if(bubbles && !customEventObject.isPropagationStopped()) {
-      parents = currentTarget.getTargets();
-      parentsLen = parents && parents.length || 0;
-      for(i = 0;i < parentsLen && !customEventObject.isPropagationStopped();i++) {
-        ret = parents[i].fire(type, customEventObject);
-        if(gRet !== false && ret !== undefined) {
-          gRet = ret
-        }
-      }
-    }
-    if(defaultFn && !customEventObject.isDefaultPrevented()) {
-      var target = customEventObject.target, lowestCustomEventObservable = target.getCustomEventObservable(customEventObject.type);
-      if(!self.defaultTargetOnly && !lowestCustomEventObservable.defaultTargetOnly || currentTarget === target) {
-        gRet = defaultFn.call(currentTarget, customEventObject)
-      }
-    }
-    return gRet
-  }, notify:function(event) {
-    var observers = [].concat(this.observers), ret, gRet, len = observers.length, i;
-    for(i = 0;i < len && !event.isImmediatePropagationStopped();i++) {
-      ret = observers[i].notify(event, this);
-      if(gRet !== false && ret !== undefined) {
-        gRet = ret
-      }
-    }
-    return gRet
-  }, detach:function(cfg) {
-    var groupsRe, self = this, fn = cfg.fn, context = cfg.context, currentTarget = self.currentTarget, observers = self.observers, groups = cfg.groups;
-    if(!observers.length) {
-      return
-    }
-    if(groups) {
-      groupsRe = Utils.getGroupsRe(groups)
-    }
-    var i, j, t, observer, observerContext, len = observers.length;
-    if(fn || groupsRe) {
-      context = context || currentTarget;
-      for(i = 0, j = 0, t = [];i < len;++i) {
-        observer = observers[i];
-        observerContext = observer.context || currentTarget;
-        if(context !== observerContext || fn && fn !== observer.fn || groupsRe && !observer.groups.match(groupsRe)) {
-          t[j++] = observer
-        }
-      }
-      self.observers = t
-    }else {
-      self.reset()
-    }
-  }});
-  return CustomEventObservable
-});
-KISSY.add("event/custom/target", ["event/base", "./observable"], function(S, require) {
-  var BaseEvent = require("event/base");
-  var CustomEventObservable = require("./observable");
-  var Utils = BaseEvent.Utils, splitAndRun = Utils.splitAndRun, KS_BUBBLE_TARGETS = "__~ks_bubble_targets";
-  var KS_CUSTOM_EVENTS = "__~ks_custom_events";
-  return{isTarget:1, getCustomEventObservable:function(type, create) {
-    var target = this, customEvent, customEventObservables = target.getCustomEvents();
-    customEvent = customEventObservables && customEventObservables[type];
-    if(!customEvent && create) {
-      customEvent = customEventObservables[type] = new CustomEventObservable({currentTarget:target, type:type})
-    }
-    return customEvent
-  }, fire:function(type, eventData) {
-    var self = this, ret, targets = self.getTargets(), hasTargets = targets && targets.length;
-    eventData = eventData || {};
-    splitAndRun(type, function(type) {
-      var r2, customEventObservable;
-      Utils.fillGroupsForEvent(type, eventData);
-      type = eventData.type;
-      customEventObservable = self.getCustomEventObservable(type);
-      if(!customEventObservable && !hasTargets) {
-        return
-      }
-      if(customEventObservable) {
-        if(!customEventObservable.hasObserver() && !customEventObservable.defaultFn) {
-          if(customEventObservable.bubbles && !hasTargets || !customEventObservable.bubbles) {
-            return
-          }
-        }
-      }else {
-        customEventObservable = new CustomEventObservable({currentTarget:self, type:type})
-      }
-      r2 = customEventObservable.fire(eventData);
-      if(ret !== false && r2 !== undefined) {
-        ret = r2
-      }
-    });
-    return ret
-  }, publish:function(type, cfg) {
-    var customEventObservable, self = this;
-    splitAndRun(type, function(t) {
-      customEventObservable = self.getCustomEventObservable(t, true);
-      S.mix(customEventObservable, cfg)
-    });
-    return self
-  }, addTarget:function(anotherTarget) {
-    var self = this, targets = self.getTargets();
-    if(!S.inArray(anotherTarget, targets)) {
-      targets.push(anotherTarget)
-    }
-    return self
-  }, removeTarget:function(anotherTarget) {
-    var self = this, targets = self.getTargets(), index = S.indexOf(anotherTarget, targets);
-    if(index !== -1) {
-      targets.splice(index, 1)
-    }
-    return self
-  }, getTargets:function() {
-    return this[KS_BUBBLE_TARGETS] || (this[KS_BUBBLE_TARGETS] = [])
-  }, getCustomEvents:function() {
-    return this[KS_CUSTOM_EVENTS] || (this[KS_CUSTOM_EVENTS] = {})
-  }, on:function(type, fn, context) {
-    var self = this;
-    Utils.batchForType(function(type, fn, context) {
-      var cfg = Utils.normalizeParam(type, fn, context), customEvent;
-      type = cfg.type;
-      customEvent = self.getCustomEventObservable(type, true);
-      if(customEvent) {
-        customEvent.on(cfg)
-      }
-    }, 0, type, fn, context);
-    return self
-  }, detach:function(type, fn, context) {
-    var self = this;
-    Utils.batchForType(function(type, fn, context) {
-      var cfg = Utils.normalizeParam(type, fn, context), customEvents, customEvent;
-      type = cfg.type;
-      if(type) {
-        customEvent = self.getCustomEventObservable(type, true);
-        if(customEvent) {
-          customEvent.detach(cfg)
-        }
-      }else {
-        customEvents = self.getCustomEvents();
-        S.each(customEvents, function(customEvent) {
-          customEvent.detach(cfg)
-        })
-      }
-    }, 0, type, fn, context);
-    return self
-  }}
-});
-KISSY.add("event/custom", ["./custom/target"], function(S, require) {
-  var Target = require("./custom/target");
-  return{Target:Target, global:S.mix({}, Target)}
-});
-
-/*
-Copyright 2013, KISSY v1.42
-MIT Licensed
-build time: Dec 4 22:15
-*/
-/*
- Combined processedModules by KISSY Module Compiler: 
-
- event/base/utils
- event/base/object
- event/base/observer
- event/base/observable
- event/base
-*/
-
-KISSY.add("event/base/utils", [], function(S) {
-  var splitAndRun, getGroupsRe;
-  function getTypedGroups(type) {
-    if(type.indexOf(".") < 0) {
-      return[type, ""]
-    }
-    var m = type.match(/([^.]+)?(\..+)?$/), t = m[1], ret = [t], gs = m[2];
-    if(gs) {
-      gs = gs.split(".").sort();
-      ret.push(gs.join("."))
-    }else {
-      ret.push("")
-    }
-    return ret
-  }
-  return{splitAndRun:splitAndRun = function(type, fn) {
-    if(S.isArray(type)) {
-      S.each(type, fn);
-      return
-    }
-    type = S.trim(type);
-    if(type.indexOf(" ") === -1) {
-      fn(type)
-    }else {
-      S.each(type.split(/\s+/), fn)
-    }
-  }, normalizeParam:function(type, fn, context) {
-    var cfg = fn || {};
-    if(typeof fn === "function") {
-      cfg = {fn:fn, context:context}
-    }else {
-      cfg = S.merge(cfg)
-    }
-    var typedGroups = getTypedGroups(type);
-    type = typedGroups[0];
-    cfg.groups = typedGroups[1];
-    cfg.type = type;
-    return cfg
-  }, batchForType:function(fn, num) {
-    var args = S.makeArray(arguments), types = args[2 + num];
-    if(types && typeof types === "object") {
-      S.each(types, function(value, type) {
-        var args2 = [].concat(args);
-        args2.splice(0, 2);
-        args2[num] = type;
-        args2[num + 1] = value;
-        fn.apply(null, args2)
-      })
-    }else {
-      splitAndRun(types, function(type) {
-        var args2 = [].concat(args);
-        args2.splice(0, 2);
-        args2[num] = type;
-        fn.apply(null, args2)
-      })
-    }
-  }, fillGroupsForEvent:function(type, eventData) {
-    var typedGroups = getTypedGroups(type), _ksGroups = typedGroups[1];
-    if(_ksGroups) {
-      _ksGroups = getGroupsRe(_ksGroups);
-      eventData._ksGroups = _ksGroups
-    }
-    eventData.type = typedGroups[0]
-  }, getGroupsRe:getGroupsRe = function(groups) {
-    return new RegExp(groups.split(".").join(".*\\.") + "(?:\\.|$)")
-  }}
-});
-KISSY.add("event/base/object", [], function(S, undefined) {
-  var returnFalse = function() {
-    return false
-  }, returnTrue = function() {
-    return true
-  };
-  function EventObject() {
-    var self = this;
-    self.timeStamp = S.now();
-    self.target = undefined;
-    self.currentTarget = undefined
-  }
-  EventObject.prototype = {constructor:EventObject, isDefaultPrevented:returnFalse, isPropagationStopped:returnFalse, isImmediatePropagationStopped:returnFalse, preventDefault:function() {
-    this.isDefaultPrevented = returnTrue
-  }, stopPropagation:function() {
-    this.isPropagationStopped = returnTrue
-  }, stopImmediatePropagation:function() {
-    var self = this;
-    self.isImmediatePropagationStopped = returnTrue;
-    self.stopPropagation()
-  }, halt:function(immediate) {
-    var self = this;
-    if(immediate) {
-      self.stopImmediatePropagation()
-    }else {
-      self.stopPropagation()
-    }
-    self.preventDefault()
-  }};
-  return EventObject
-});
-KISSY.add("event/base/observer", [], function(S, undefined) {
-  function Observer(cfg) {
-    S.mix(this, cfg)
-  }
-  Observer.prototype = {constructor:Observer, equals:function(s2) {
-    var s1 = this;
-    return!!S.reduce(s1.keys, function(v, k) {
-      return v && s1[k] === s2[k]
-    }, 1)
-  }, simpleNotify:function(event, ce) {
-    var ret, self = this;
-    ret = self.fn.call(self.context || ce.currentTarget, event, self.data);
-    if(self.once) {
-      ce.removeObserver(self)
-    }
-    return ret
-  }, notifyInternal:function(event, ce) {
-    var ret = this.simpleNotify(event, ce);
-    if(ret === false) {
-      event.halt()
-    }
-    return ret
-  }, notify:function(event, ce) {
-    var self = this, _ksGroups = event._ksGroups;
-    if(_ksGroups && (!self.groups || !self.groups.match(_ksGroups))) {
-      return undefined
-    }
-    return self.notifyInternal(event, ce)
-  }};
-  return Observer
-});
-KISSY.add("event/base/observable", [], function(S) {
-  function Observable(cfg) {
-    var self = this;
-    self.currentTarget = null;
-    S.mix(self, cfg);
-    self.reset()
-  }
-  Observable.prototype = {constructor:Observable, hasObserver:function() {
-    return!!this.observers.length
-  }, reset:function() {
-    var self = this;
-    self.observers = []
-  }, removeObserver:function(observer) {
-    var self = this, i, observers = self.observers, len = observers.length;
-    for(i = 0;i < len;i++) {
-      if(observers[i] === observer) {
-        observers.splice(i, 1);
-        break
-      }
-    }
-    self.checkMemory()
-  }, checkMemory:function() {
-  }, findObserver:function(observer) {
-    var observers = this.observers, i;
-    for(i = observers.length - 1;i >= 0;--i) {
-      if(observer.equals(observers[i])) {
-        return i
-      }
-    }
-    return-1
-  }};
-  return Observable
-});
-KISSY.add("event/base", ["./base/utils", "./base/object", "./base/observer", "./base/observable"], function(S, require) {
-  var Utils = require("./base/utils");
-  var Object = require("./base/object");
-  var Observer = require("./base/observer");
-  var Observable = require("./base/observable");
-  return{Utils:Utils, Object:Object, Observer:Observer, Observable:Observable}
-});
-
-/*
 Copyright 2014, KISSY v1.42
 MIT Licensed
 build time: Feb 26 18:57
@@ -3041,308 +1996,21 @@ KISSY.add("dom/base", ["./base/api", "./base/attr", "./base/class", "./base/crea
 /*
 Copyright 2013, KISSY v1.42
 MIT Licensed
-build time: Dec 4 22:17
+build time: Dec 4 22:16
 */
 /*
  Combined processedModules by KISSY Module Compiler: 
 
- node/base
- node/attach
- node/override
- node/anim
- node
+ event
 */
 
-KISSY.add("node/base", ["dom", "event/dom"], function(S, require) {
-  var Dom = require("dom");
-  var Event = require("event/dom");
-  var AP = Array.prototype, slice = AP.slice, NodeType = Dom.NodeType, push = AP.push, makeArray = S.makeArray, isNodeList = Dom.isDomNodeList;
-  function NodeList(html, props, ownerDocument) {
-    var self = this, domNode;
-    if(!(self instanceof NodeList)) {
-      return new NodeList(html, props, ownerDocument)
-    }
-    if(!html) {
-      return self
-    }else {
-      if(typeof html === "string") {
-        domNode = Dom.create(html, props, ownerDocument);
-        if(domNode.nodeType === NodeType.DOCUMENT_FRAGMENT_NODE) {
-          push.apply(this, makeArray(domNode.childNodes));
-          return self
-        }
-      }else {
-        if(S.isArray(html) || isNodeList(html)) {
-          push.apply(self, makeArray(html));
-          return self
-        }else {
-          domNode = html
-        }
-      }
-    }
-    self[0] = domNode;
-    self.length = 1;
-    return self
-  }
-  NodeList.prototype = {constructor:NodeList, isNodeList:true, length:0, item:function(index) {
-    var self = this;
-    if(typeof index === "number") {
-      if(index >= self.length) {
-        return null
-      }else {
-        return new NodeList(self[index])
-      }
-    }else {
-      return new NodeList(index)
-    }
-  }, add:function(selector, context, index) {
-    if(typeof context === "number") {
-      index = context;
-      context = undefined
-    }
-    var list = NodeList.all(selector, context).getDOMNodes(), ret = new NodeList(this);
-    if(index === undefined) {
-      push.apply(ret, list)
-    }else {
-      var args = [index, 0];
-      args.push.apply(args, list);
-      AP.splice.apply(ret, args)
-    }
-    return ret
-  }, slice:function() {
-    return new NodeList(slice.apply(this, arguments))
-  }, getDOMNodes:function() {
-    return slice.call(this)
-  }, each:function(fn, context) {
-    var self = this;
-    S.each(self, function(n, i) {
-      n = new NodeList(n);
-      return fn.call(context || n, n, i, self)
-    });
-    return self
-  }, getDOMNode:function() {
-    return this[0]
-  }, end:function() {
-    var self = this;
-    return self.__parent || self
-  }, filter:function(filter) {
-    return new NodeList(Dom.filter(this, filter))
-  }, all:function(selector) {
-    var ret, self = this;
-    if(self.length > 0) {
-      ret = NodeList.all(selector, self)
-    }else {
-      ret = new NodeList
-    }
-    ret.__parent = self;
-    return ret
-  }, one:function(selector) {
-    var self = this, all = self.all(selector), ret = all.length ? all.slice(0, 1) : null;
-    if(ret) {
-      ret.__parent = self
-    }
-    return ret
-  }};
-  S.mix(NodeList, {all:function(selector, context) {
-    if(typeof selector === "string" && (selector = S.trim(selector)) && selector.length >= 3 && S.startsWith(selector, "<") && S.endsWith(selector, ">")) {
-      if(context) {
-        if(context.getDOMNode) {
-          context = context[0]
-        }
-        context = context.ownerDocument || context
-      }
-      return new NodeList(selector, undefined, context)
-    }
-    return new NodeList(Dom.query(selector, context))
-  }, one:function(selector, context) {
-    var all = NodeList.all(selector, context);
-    return all.length ? all.slice(0, 1) : null
-  }});
-  NodeList.NodeType = NodeType;
-  NodeList.KeyCode = Event.KeyCode;
-  NodeList.Gesture = Event.Gesture;
-  NodeList.REPLACE_HISTORY = Event.REPLACE_HISTORY;
-  return NodeList
-});
-KISSY.add("node/attach", ["dom", "event/dom", "./base"], function(S, require) {
-  var Dom = require("dom");
-  var Event = require("event/dom");
-  var NodeList = require("./base");
-  var NLP = NodeList.prototype, makeArray = S.makeArray, DOM_INCLUDES_NORM = ["nodeName", "isCustomDomain", "getEmptyIframeSrc", "equals", "contains", "index", "scrollTop", "scrollLeft", "height", "width", "innerHeight", "innerWidth", "outerHeight", "outerWidth", "addStyleSheet", "appendTo", "prependTo", "insertBefore", "before", "after", "insertAfter", "test", "hasClass", "addClass", "removeClass", "replaceClass", "toggleClass", "removeAttr", "hasAttr", "hasProp", "scrollIntoView", "remove", "empty", 
-  "removeData", "hasData", "unselectable", "wrap", "wrapAll", "replaceWith", "wrapInner", "unwrap"], DOM_INCLUDES_NORM_NODE_LIST = ["getWindow", "getDocument", "filter", "first", "last", "parent", "closest", "next", "prev", "clone", "siblings", "contents", "children"], DOM_INCLUDES_NORM_IF = {attr:1, text:0, css:1, style:1, val:0, prop:1, offset:0, html:0, outerHTML:0, outerHtml:0, data:1}, EVENT_INCLUDES_SELF = ["on", "detach", "delegate", "undelegate"], EVENT_INCLUDES_RET = ["fire", "fireHandler"];
-  NodeList.KeyCode = Event.KeyCode;
-  function accessNorm(fn, self, args) {
-    args.unshift(self);
-    var ret = Dom[fn].apply(Dom, args);
-    if(ret === undefined) {
-      return self
-    }
-    return ret
-  }
-  function accessNormList(fn, self, args) {
-    args.unshift(self);
-    var ret = Dom[fn].apply(Dom, args);
-    if(ret === undefined) {
-      return self
-    }else {
-      if(ret === null) {
-        return null
-      }
-    }
-    return new NodeList(ret)
-  }
-  function accessNormIf(fn, self, index, args) {
-    if(args[index] === undefined && !S.isObject(args[0])) {
-      args.unshift(self);
-      return Dom[fn].apply(Dom, args)
-    }
-    return accessNorm(fn, self, args)
-  }
-  S.each(DOM_INCLUDES_NORM, function(k) {
-    NLP[k] = function() {
-      var args = makeArray(arguments);
-      return accessNorm(k, this, args)
-    }
-  });
-  S.each(DOM_INCLUDES_NORM_NODE_LIST, function(k) {
-    NLP[k] = function() {
-      var args = makeArray(arguments);
-      return accessNormList(k, this, args)
-    }
-  });
-  S.each(DOM_INCLUDES_NORM_IF, function(index, k) {
-    NLP[k] = function() {
-      var args = makeArray(arguments);
-      return accessNormIf(k, this, index, args)
-    }
-  });
-  S.each(EVENT_INCLUDES_SELF, function(k) {
-    NLP[k] = function() {
-      var self = this, args = makeArray(arguments);
-      args.unshift(self);
-      Event[k].apply(Event, args);
-      return self
-    }
-  });
-  S.each(EVENT_INCLUDES_RET, function(k) {
-    NLP[k] = function() {
-      var self = this, args = makeArray(arguments);
-      args.unshift(self);
-      return Event[k].apply(Event, args)
-    }
-  })
-});
-KISSY.add("node/override", ["dom", "./base", "./attach"], function(S, require) {
-  var Dom = require("dom");
-  var NodeList = require("./base");
-  require("./attach");
-  var NLP = NodeList.prototype;
-  S.each(["append", "prepend", "before", "after"], function(insertType) {
-    NLP[insertType] = function(html) {
-      var newNode = html, self = this;
-      if(typeof newNode === "string") {
-        newNode = Dom.create(newNode)
-      }
-      if(newNode) {
-        Dom[insertType](newNode, self)
-      }
-      return self
-    }
-  });
-  S.each(["wrap", "wrapAll", "replaceWith", "wrapInner"], function(fixType) {
-    var orig = NLP[fixType];
-    NLP[fixType] = function(others) {
-      var self = this;
-      if(typeof others === "string") {
-        others = NodeList.all(others, self[0].ownerDocument)
-      }
-      return orig.call(self, others)
-    }
-  })
-});
-KISSY.add("node/anim", ["./base", "dom", "anim"], function(S, require) {
-  var Node = require("./base");
-  var Dom = require("dom");
-  var Anim = require("anim");
-  var FX = [["height", "margin-top", "margin-bottom", "padding-top", "padding-bottom"], ["width", "margin-left", "margin-right", "padding-left", "padding-right"], ["opacity"]];
-  function getFxs(type, num, from) {
-    var ret = [], obj = {};
-    for(var i = from || 0;i < num;i++) {
-      ret.push.apply(ret, FX[i])
-    }
-    for(i = 0;i < ret.length;i++) {
-      obj[ret[i]] = type
-    }
-    return obj
-  }
-  S.augment(Node, {animate:function() {
-    var self = this, originArgs = S.makeArray(arguments);
-    S.each(self, function(elem) {
-      var args = S.clone(originArgs), arg0 = args[0];
-      if(arg0.to) {
-        arg0.node = elem;
-        (new Anim(arg0)).run()
-      }else {
-        Anim.apply(undefined, [elem].concat(args)).run()
-      }
-    });
-    return self
-  }, stop:function(end, clearQueue, queue) {
-    var self = this;
-    S.each(self, function(elem) {
-      Anim.stop(elem, end, clearQueue, queue)
-    });
-    return self
-  }, pause:function(end, queue) {
-    var self = this;
-    S.each(self, function(elem) {
-      Anim.pause(elem, queue)
-    });
-    return self
-  }, resume:function(end, queue) {
-    var self = this;
-    S.each(self, function(elem) {
-      Anim.resume(elem, queue)
-    });
-    return self
-  }, isRunning:function() {
-    var self = this;
-    for(var i = 0;i < self.length;i++) {
-      if(Anim.isRunning(self[i])) {
-        return true
-      }
-    }
-    return false
-  }, isPaused:function() {
-    var self = this;
-    for(var i = 0;i < self.length;i++) {
-      if(Anim.isPaused(self[i])) {
-        return true
-      }
-    }
-    return false
-  }});
-  S.each({show:getFxs("show", 3), hide:getFxs("hide", 3), toggle:getFxs("toggle", 3), fadeIn:getFxs("show", 3, 2), fadeOut:getFxs("hide", 3, 2), fadeToggle:getFxs("toggle", 3, 2), slideDown:getFxs("show", 1), slideUp:getFxs("hide", 1), slideToggle:getFxs("toggle", 1)}, function(v, k) {
-    Node.prototype[k] = function(duration, complete, easing) {
-      var self = this;
-      if(Dom[k] && !duration) {
-        Dom[k](self)
-      }else {
-        S.each(self, function(elem) {
-          (new Anim(elem, v, duration, easing, complete)).run()
-        })
-      }
-      return self
-    }
-  })
-});
-KISSY.add("node", ["node/base", "node/attach", "node/override", "node/anim"], function(S, require) {
-  var Node = require("node/base");
-  require("node/attach");
-  require("node/override");
-  require("node/anim");
-  S.mix(S, {Node:Node, NodeList:Node, one:Node.one, all:Node.all});
-  return Node
+KISSY.add("event", ["event/dom", "event/custom"], function(S, require) {
+  var DomEvent = require("event/dom");
+  var CustomEvent = require("event/custom");
+  var Event = S.Event = S.merge(DomEvent, {DomEvent:DomEvent, CustomEvent:CustomEvent});
+  Event.global = CustomEvent.global;
+  S.EventTarget = Event.Target = CustomEvent.Target;
+  return Event
 });
 
 /*
@@ -4160,6 +2828,191 @@ KISSY.add("event/dom/base", ["./base/dom-event", "./base/object", "./base/key-co
 /*
 Copyright 2013, KISSY v1.42
 MIT Licensed
+build time: Dec 4 22:15
+*/
+/*
+ Combined processedModules by KISSY Module Compiler: 
+
+ event/base/utils
+ event/base/object
+ event/base/observer
+ event/base/observable
+ event/base
+*/
+
+KISSY.add("event/base/utils", [], function(S) {
+  var splitAndRun, getGroupsRe;
+  function getTypedGroups(type) {
+    if(type.indexOf(".") < 0) {
+      return[type, ""]
+    }
+    var m = type.match(/([^.]+)?(\..+)?$/), t = m[1], ret = [t], gs = m[2];
+    if(gs) {
+      gs = gs.split(".").sort();
+      ret.push(gs.join("."))
+    }else {
+      ret.push("")
+    }
+    return ret
+  }
+  return{splitAndRun:splitAndRun = function(type, fn) {
+    if(S.isArray(type)) {
+      S.each(type, fn);
+      return
+    }
+    type = S.trim(type);
+    if(type.indexOf(" ") === -1) {
+      fn(type)
+    }else {
+      S.each(type.split(/\s+/), fn)
+    }
+  }, normalizeParam:function(type, fn, context) {
+    var cfg = fn || {};
+    if(typeof fn === "function") {
+      cfg = {fn:fn, context:context}
+    }else {
+      cfg = S.merge(cfg)
+    }
+    var typedGroups = getTypedGroups(type);
+    type = typedGroups[0];
+    cfg.groups = typedGroups[1];
+    cfg.type = type;
+    return cfg
+  }, batchForType:function(fn, num) {
+    var args = S.makeArray(arguments), types = args[2 + num];
+    if(types && typeof types === "object") {
+      S.each(types, function(value, type) {
+        var args2 = [].concat(args);
+        args2.splice(0, 2);
+        args2[num] = type;
+        args2[num + 1] = value;
+        fn.apply(null, args2)
+      })
+    }else {
+      splitAndRun(types, function(type) {
+        var args2 = [].concat(args);
+        args2.splice(0, 2);
+        args2[num] = type;
+        fn.apply(null, args2)
+      })
+    }
+  }, fillGroupsForEvent:function(type, eventData) {
+    var typedGroups = getTypedGroups(type), _ksGroups = typedGroups[1];
+    if(_ksGroups) {
+      _ksGroups = getGroupsRe(_ksGroups);
+      eventData._ksGroups = _ksGroups
+    }
+    eventData.type = typedGroups[0]
+  }, getGroupsRe:getGroupsRe = function(groups) {
+    return new RegExp(groups.split(".").join(".*\\.") + "(?:\\.|$)")
+  }}
+});
+KISSY.add("event/base/object", [], function(S, undefined) {
+  var returnFalse = function() {
+    return false
+  }, returnTrue = function() {
+    return true
+  };
+  function EventObject() {
+    var self = this;
+    self.timeStamp = S.now();
+    self.target = undefined;
+    self.currentTarget = undefined
+  }
+  EventObject.prototype = {constructor:EventObject, isDefaultPrevented:returnFalse, isPropagationStopped:returnFalse, isImmediatePropagationStopped:returnFalse, preventDefault:function() {
+    this.isDefaultPrevented = returnTrue
+  }, stopPropagation:function() {
+    this.isPropagationStopped = returnTrue
+  }, stopImmediatePropagation:function() {
+    var self = this;
+    self.isImmediatePropagationStopped = returnTrue;
+    self.stopPropagation()
+  }, halt:function(immediate) {
+    var self = this;
+    if(immediate) {
+      self.stopImmediatePropagation()
+    }else {
+      self.stopPropagation()
+    }
+    self.preventDefault()
+  }};
+  return EventObject
+});
+KISSY.add("event/base/observer", [], function(S, undefined) {
+  function Observer(cfg) {
+    S.mix(this, cfg)
+  }
+  Observer.prototype = {constructor:Observer, equals:function(s2) {
+    var s1 = this;
+    return!!S.reduce(s1.keys, function(v, k) {
+      return v && s1[k] === s2[k]
+    }, 1)
+  }, simpleNotify:function(event, ce) {
+    var ret, self = this;
+    ret = self.fn.call(self.context || ce.currentTarget, event, self.data);
+    if(self.once) {
+      ce.removeObserver(self)
+    }
+    return ret
+  }, notifyInternal:function(event, ce) {
+    var ret = this.simpleNotify(event, ce);
+    if(ret === false) {
+      event.halt()
+    }
+    return ret
+  }, notify:function(event, ce) {
+    var self = this, _ksGroups = event._ksGroups;
+    if(_ksGroups && (!self.groups || !self.groups.match(_ksGroups))) {
+      return undefined
+    }
+    return self.notifyInternal(event, ce)
+  }};
+  return Observer
+});
+KISSY.add("event/base/observable", [], function(S) {
+  function Observable(cfg) {
+    var self = this;
+    self.currentTarget = null;
+    S.mix(self, cfg);
+    self.reset()
+  }
+  Observable.prototype = {constructor:Observable, hasObserver:function() {
+    return!!this.observers.length
+  }, reset:function() {
+    var self = this;
+    self.observers = []
+  }, removeObserver:function(observer) {
+    var self = this, i, observers = self.observers, len = observers.length;
+    for(i = 0;i < len;i++) {
+      if(observers[i] === observer) {
+        observers.splice(i, 1);
+        break
+      }
+    }
+    self.checkMemory()
+  }, checkMemory:function() {
+  }, findObserver:function(observer) {
+    var observers = this.observers, i;
+    for(i = observers.length - 1;i >= 0;--i) {
+      if(observer.equals(observers[i])) {
+        return i
+      }
+    }
+    return-1
+  }};
+  return Observable
+});
+KISSY.add("event/base", ["./base/utils", "./base/object", "./base/observer", "./base/observable"], function(S, require) {
+  var Utils = require("./base/utils");
+  var Object = require("./base/object");
+  var Observer = require("./base/observer");
+  var Observable = require("./base/observable");
+  return{Utils:Utils, Object:Object, Observer:Observer, Observable:Observable}
+});
+
+/*
+Copyright 2013, KISSY v1.42
+MIT Licensed
 build time: Dec 4 22:16
 */
 /*
@@ -4253,1392 +3106,216 @@ KISSY.add("event/dom/focusin", ["event/dom/base"], function(S, require) {
 /*
 Copyright 2013, KISSY v1.42
 MIT Licensed
-build time: Dec 4 22:04
+build time: Dec 4 22:15
 */
 /*
  Combined processedModules by KISSY Module Compiler: 
 
- anim
+ event/custom/observer
+ event/custom/object
+ event/custom/observable
+ event/custom/target
+ event/custom
 */
 
-KISSY.add("anim", ["anim/base", "anim/timer", "anim/transition?"], function(S, require) {
-  var AnimBase = require("anim/base"), TimerAnim = require("anim/timer");
-  var TransitionAnim = require("anim/transition?");
-  var logger = S.getLogger("s/anim");
-  var Utils = AnimBase.Utils, defaultConfig = {duration:1, easing:"linear"};
-  function Anim(node, to, duration, easing, complete) {
-    var config;
-    if(node.node) {
-      config = node
-    }else {
-      if(typeof to === "string") {
-        to = S.unparam(String(to), ";", ":");
-        S.each(to, function(value, prop) {
-          var trimProp = S.trim(prop);
-          if(trimProp) {
-            to[trimProp] = S.trim(value)
-          }
-          if(!trimProp || trimProp !== prop) {
-            delete to[prop]
-          }
-        })
-      }else {
-        to = S.clone(to)
-      }
-      if(S.isPlainObject(duration)) {
-        config = S.clone(duration)
-      }else {
-        config = {complete:complete};
-        if(duration) {
-          config.duration = duration
-        }
-        if(easing) {
-          config.easing = easing
-        }
-      }
-      config.node = node;
-      config.to = to
-    }
-    config = S.merge(defaultConfig, config, {useTransition:S.config("anim/useTransition")});
-    if(config.useTransition && TransitionAnim) {
-      logger.info("use transition anim");
-      return new TransitionAnim(config)
-    }else {
-      logger.info("use js timer anim");
-      return new TimerAnim(config)
-    }
+KISSY.add("event/custom/observer", ["event/base"], function(S, require) {
+  var BaseEvent = require("event/base");
+  function CustomEventObserver() {
+    CustomEventObserver.superclass.constructor.apply(this, arguments)
   }
-  S.each(["pause", "resume"], function(action) {
-    Anim[action] = function(node, queue) {
-      if(queue === null || typeof queue === "string" || queue === false) {
-        return Utils.pauseOrResumeQueue(node, queue, action)
-      }
-      return Utils.pauseOrResumeQueue(node, undefined, action)
-    }
-  });
-  Anim.isRunning = Utils.isElRunning;
-  Anim.isPaused = Utils.isElPaused;
-  Anim.stop = Utils.stopEl;
-  Anim.Easing = TimerAnim.Easing;
-  S.Anim = Anim;
-  Anim.Q = AnimBase.Q;
-  return Anim
+  S.extend(CustomEventObserver, BaseEvent.Observer, {keys:["fn", "context", "groups"]});
+  return CustomEventObserver
 });
-
-/*
-Copyright 2013, KISSY v1.42
-MIT Licensed
-build time: Dec 23 18:52
-*/
-/*
- Combined processedModules by KISSY Module Compiler: 
-
- anim/base/queue
- anim/base/utils
- anim/base
-*/
-
-KISSY.add("anim/base/queue", ["dom"], function(S, require) {
-  var Dom = require("dom");
-  var queueCollectionKey = S.guid("ks-queue-" + S.now() + "-"), queueKey = S.guid("ks-queue-" + S.now() + "-"), Q;
-  function getQueue(node, name, readOnly) {
-    name = name || queueKey;
-    var qu, quCollection = Dom.data(node, queueCollectionKey);
-    if(!quCollection && !readOnly) {
-      Dom.data(node, queueCollectionKey, quCollection = {})
-    }
-    if(quCollection) {
-      qu = quCollection[name];
-      if(!qu && !readOnly) {
-        qu = quCollection[name] = []
-      }
-    }
-    return qu
+KISSY.add("event/custom/object", ["event/base"], function(S, require) {
+  var BaseEvent = require("event/base");
+  function CustomEventObject(data) {
+    CustomEventObject.superclass.constructor.call(this);
+    S.mix(this, data)
   }
-  Q = {queueCollectionKey:queueCollectionKey, queue:function(node, queue, item) {
-    var qu = getQueue(node, queue);
-    qu.push(item);
-    return qu
-  }, remove:function(node, queue, item) {
-    var qu = getQueue(node, queue, 1), index;
-    if(qu) {
-      index = S.indexOf(item, qu);
-      if(index > -1) {
-        qu.splice(index, 1)
-      }
-    }
-    if(qu && !qu.length) {
-      Q.clearQueue(node, queue)
-    }
-    return qu
-  }, clearQueues:function(node) {
-    Dom.removeData(node, queueCollectionKey)
-  }, clearQueue:function clearQueue(node, queue) {
-    queue = queue || queueKey;
-    var quCollection = Dom.data(node, queueCollectionKey);
-    if(quCollection) {
-      delete quCollection[queue]
-    }
-    if(S.isEmptyObject(quCollection)) {
-      Dom.removeData(node, queueCollectionKey)
-    }
-  }, dequeue:function(node, queue) {
-    var qu = getQueue(node, queue, 1);
-    if(qu) {
-      qu.shift();
-      if(!qu.length) {
-        Q.clearQueue(node, queue)
-      }
-    }
-    return qu
-  }};
-  return Q
+  S.extend(CustomEventObject, BaseEvent.Object);
+  return CustomEventObject
 });
-KISSY.add("anim/base/utils", ["./queue", "dom"], function(S, require) {
-  var Q = require("./queue"), Dom = require("dom");
-  var runningKey = S.guid("ks-anim-unqueued-" + S.now() + "-");
-  function saveRunningAnim(anim) {
-    var node = anim.node, allRunning = Dom.data(node, runningKey);
-    if(!allRunning) {
-      Dom.data(node, runningKey, allRunning = {})
-    }
-    allRunning[S.stamp(anim)] = anim
-  }
-  function removeRunningAnim(anim) {
-    var node = anim.node, allRunning = Dom.data(node, runningKey);
-    if(allRunning) {
-      delete allRunning[S.stamp(anim)];
-      if(S.isEmptyObject(allRunning)) {
-        Dom.removeData(node, runningKey)
-      }
-    }
-  }
-  function isAnimRunning(anim) {
-    var node = anim.node, allRunning = Dom.data(node, runningKey);
-    if(allRunning) {
-      return!!allRunning[S.stamp(anim)]
-    }
-    return 0
-  }
-  var pausedKey = S.guid("ks-anim-paused-" + S.now() + "-");
-  function savePausedAnim(anim) {
-    var node = anim.node, paused = Dom.data(node, pausedKey);
-    if(!paused) {
-      Dom.data(node, pausedKey, paused = {})
-    }
-    paused[S.stamp(anim)] = anim
-  }
-  function removePausedAnim(anim) {
-    var node = anim.node, paused = Dom.data(node, pausedKey);
-    if(paused) {
-      delete paused[S.stamp(anim)];
-      if(S.isEmptyObject(paused)) {
-        Dom.removeData(node, pausedKey)
-      }
-    }
-  }
-  function isAnimPaused(anim) {
-    var node = anim.node, paused = Dom.data(node, pausedKey);
-    if(paused) {
-      return!!paused[S.stamp(anim)]
-    }
-    return 0
-  }
-  function pauseOrResumeQueue(node, queue, action) {
-    var allAnims = Dom.data(node, action === "resume" ? pausedKey : runningKey), anims = S.merge(allAnims);
-    S.each(anims, function(anim) {
-      if(queue === undefined || anim.config.queue === queue) {
-        anim[action]()
-      }
-    })
-  }
-  return{saveRunningAnim:saveRunningAnim, removeRunningAnim:removeRunningAnim, isAnimPaused:isAnimPaused, removePausedAnim:removePausedAnim, savePausedAnim:savePausedAnim, isAnimRunning:isAnimRunning, isElPaused:function(node) {
-    var paused = Dom.data(node, pausedKey);
-    return paused && !S.isEmptyObject(paused)
-  }, isElRunning:function(node) {
-    var allRunning = Dom.data(node, runningKey);
-    return allRunning && !S.isEmptyObject(allRunning)
-  }, pauseOrResumeQueue:pauseOrResumeQueue, stopEl:function(node, end, clearQueue, queue) {
-    if(clearQueue) {
-      if(queue === undefined) {
-        Q.clearQueues(node)
-      }else {
-        if(queue !== false) {
-          Q.clearQueue(node, queue)
-        }
-      }
-    }
-    var allRunning = Dom.data(node, runningKey), anims = S.merge(allRunning);
-    S.each(anims, function(anim) {
-      if(queue === undefined || anim.config.queue === queue) {
-        anim.stop(end)
-      }
-    })
-  }}
-});
-KISSY.add("anim/base", ["dom", "./base/utils", "./base/queue", "promise"], function(S, require) {
-  var Dom = require("dom"), Utils = require("./base/utils"), Q = require("./base/queue"), Promise = require("promise");
-  var logger = S.getLogger("s/anim");
-  var NodeType = Dom.NodeType, noop = S.noop, specialVals = {toggle:1, hide:1, show:1};
-  function AnimBase(config) {
+KISSY.add("event/custom/observable", ["event/base", "./observer", "./object"], function(S, require) {
+  var BaseEvent = require("event/base");
+  var CustomEventObserver = require("./observer");
+  var CustomEventObject = require("./object");
+  var Utils = BaseEvent.Utils;
+  function CustomEventObservable() {
     var self = this;
-    AnimBase.superclass.constructor.call(self);
-    Promise.Defer(self);
-    self.config = config;
-    var node = config.node;
-    if(!S.isPlainObject(node)) {
-      node = Dom.get(config.node)
-    }
-    self.node = self.el = node;
-    self._backupProps = {};
-    self._propsData = {}
+    CustomEventObservable.superclass.constructor.apply(self, arguments);
+    self.defaultFn = null;
+    self.defaultTargetOnly = false;
+    self.bubbles = true
   }
-  function syncComplete(self) {
-    var _backupProps, complete = self.config.complete;
-    if(!S.isEmptyObject(_backupProps = self._backupProps)) {
-      Dom.css(self.node, _backupProps)
+  S.extend(CustomEventObservable, BaseEvent.Observable, {on:function(cfg) {
+    var observer = new CustomEventObserver(cfg);
+    if(S.Config.debug) {
+      if(!observer.fn) {
+        S.error("lack event handler for " + this.type)
+      }
     }
-    if(complete) {
-      complete.call(self)
+    if(this.findObserver(observer) === -1) {
+      this.observers.push(observer)
     }
-  }
-  S.extend(AnimBase, Promise, {on:function(name, fn) {
-    var self = this;
-    logger.warn("please use promise api of anim instead");
-    if(name === "complete") {
-      self.then(fn)
-    }else {
-      if(name === "end") {
-        self.fin(fn)
-      }else {
-        if(name === "step") {
-          self.progress(fn)
-        }else {
-          logger.error("not supported event for anim: " + name)
+  }, fire:function(eventData) {
+    eventData = eventData || {};
+    var self = this, bubbles = self.bubbles, currentTarget = self.currentTarget, parents, parentsLen, type = self.type, defaultFn = self.defaultFn, i, customEventObject = eventData, gRet, ret;
+    eventData.type = type;
+    if(!(customEventObject instanceof CustomEventObject)) {
+      customEventObject.target = currentTarget;
+      customEventObject = new CustomEventObject(customEventObject)
+    }
+    customEventObject.currentTarget = currentTarget;
+    ret = self.notify(customEventObject);
+    if(gRet !== false && ret !== undefined) {
+      gRet = ret
+    }
+    if(bubbles && !customEventObject.isPropagationStopped()) {
+      parents = currentTarget.getTargets();
+      parentsLen = parents && parents.length || 0;
+      for(i = 0;i < parentsLen && !customEventObject.isPropagationStopped();i++) {
+        ret = parents[i].fire(type, customEventObject);
+        if(gRet !== false && ret !== undefined) {
+          gRet = ret
         }
       }
     }
-    return self
-  }, prepareFx:noop, runInternal:function() {
-    var self = this, config = self.config, node = self.node, val, _backupProps = self._backupProps, _propsData = self._propsData, to = config.to, defaultDelay = config.delay || 0, defaultDuration = config.duration;
-    Utils.saveRunningAnim(self);
-    S.each(to, function(val, prop) {
-      if(!S.isPlainObject(val)) {
-        val = {value:val}
-      }
-      _propsData[prop] = S.mix({delay:defaultDelay, easing:config.easing, frame:config.frame, duration:defaultDuration}, val)
-    });
-    if(node.nodeType === NodeType.ELEMENT_NODE) {
-      if(to.width || to.height) {
-        var elStyle = node.style;
-        S.mix(_backupProps, {overflow:elStyle.overflow, "overflow-x":elStyle.overflowX, "overflow-y":elStyle.overflowY});
-        elStyle.overflow = "hidden";
-        if(Dom.css(node, "display") === "inline" && Dom.css(node, "float") === "none") {
-          if(S.UA.ieMode < 10) {
-            elStyle.zoom = 1
-          }else {
-            elStyle.display = "inline-block"
-          }
-        }
-      }
-      var exit, hidden;
-      hidden = Dom.css(node, "display") === "none";
-      S.each(_propsData, function(_propData, prop) {
-        val = _propData.value;
-        if(specialVals[val]) {
-          if(val === "hide" && hidden || val === "show" && !hidden) {
-            self.stop(true);
-            exit = false;
-            return exit
-          }
-          _backupProps[prop] = Dom.style(node, prop);
-          if(val === "toggle") {
-            val = hidden ? "show" : "hide"
-          }
-          if(val === "hide") {
-            _propData.value = 0;
-            _backupProps.display = "none"
-          }else {
-            _propData.value = Dom.css(node, prop);
-            Dom.css(node, prop, 0);
-            Dom.show(node)
-          }
-        }
-        return undefined
-      });
-      if(exit === false) {
-        return
+    if(defaultFn && !customEventObject.isDefaultPrevented()) {
+      var target = customEventObject.target, lowestCustomEventObservable = target.getCustomEventObservable(customEventObject.type);
+      if(!self.defaultTargetOnly && !lowestCustomEventObservable.defaultTargetOnly || currentTarget === target) {
+        gRet = defaultFn.call(currentTarget, customEventObject)
       }
     }
-    self.startTime = S.now();
-    if(S.isEmptyObject(_propsData)) {
-      self.__totalTime = defaultDuration * 1E3;
-      self.__waitTimeout = setTimeout(function() {
-        self.stop(true)
-      }, self.__totalTime)
-    }else {
-      self.prepareFx();
-      self.doStart()
-    }
-  }, isRunning:function() {
-    return Utils.isAnimRunning(this)
-  }, isPaused:function() {
-    return Utils.isAnimPaused(this)
-  }, pause:function() {
-    var self = this;
-    if(self.isRunning()) {
-      self._runTime = S.now() - self.startTime;
-      self.__totalTime -= self._runTime;
-      Utils.removeRunningAnim(self);
-      Utils.savePausedAnim(self);
-      if(self.__waitTimeout) {
-        clearTimeout(self.__waitTimeout)
-      }else {
-        self.doStop()
+    return gRet
+  }, notify:function(event) {
+    var observers = [].concat(this.observers), ret, gRet, len = observers.length, i;
+    for(i = 0;i < len && !event.isImmediatePropagationStopped();i++) {
+      ret = observers[i].notify(event, this);
+      if(gRet !== false && ret !== undefined) {
+        gRet = ret
       }
     }
-    return self
-  }, doStop:noop, doStart:noop, resume:function() {
-    var self = this;
-    if(self.isPaused()) {
-      self.startTime = S.now() - self._runTime;
-      Utils.removePausedAnim(self);
-      Utils.saveRunningAnim(self);
-      if(self.__waitTimeout) {
-        self.__waitTimeout = setTimeout(function() {
-          self.stop(true)
-        }, self.__totalTime)
-      }else {
-        self.beforeResume();
-        self.doStart()
-      }
-    }
-    return self
-  }, beforeResume:noop, run:function() {
-    var self = this, q, queue = self.config.queue;
-    if(queue === false) {
-      self.runInternal()
-    }else {
-      q = Q.queue(self.node, queue, self);
-      if(q.length === 1) {
-        self.runInternal()
-      }
-    }
-    return self
-  }, stop:function(finish) {
-    var self = this, node = self.node, q, queue = self.config.queue;
-    if(self.isResolved() || self.isRejected()) {
-      return self
-    }
-    if(self.__waitTimeout) {
-      clearTimeout(self.__waitTimeout);
-      self.__waitTimeout = 0
-    }
-    if(!self.isRunning() && !self.isPaused()) {
-      if(queue !== false) {
-        Q.remove(node, queue, self)
-      }
-      return self
-    }
-    self.doStop(finish);
-    Utils.removeRunningAnim(self);
-    Utils.removePausedAnim(self);
-    var defer = self.defer;
-    if(finish) {
-      syncComplete(self);
-      defer.resolve([self])
-    }else {
-      defer.reject([self])
-    }
-    if(queue !== false) {
-      q = Q.dequeue(node, queue);
-      if(q && q[0]) {
-        q[0].runInternal()
-      }
-    }
-    return self
-  }});
-  AnimBase.Utils = Utils;
-  AnimBase.Q = Q;
-  return AnimBase
-});
-
-/*
-Copyright 2013, KISSY v1.42
-MIT Licensed
-build time: Dec 4 22:17
-*/
-/*
- Combined processedModules by KISSY Module Compiler: 
-
- promise
-*/
-
-KISSY.add("promise", [], function(S) {
-  var logger = S.getLogger("s/promise");
-  var PROMISE_VALUE = "__promise_value", processImmediate = S.setImmediate, PROMISE_PROGRESS_LISTENERS = "__promise_progress_listeners", PROMISE_PENDINGS = "__promise_pendings";
-  function logError(str) {
-    if(typeof console !== "undefined" && console.error) {
-      console.error(str)
-    }
-  }
-  function promiseWhen(promise, fulfilled, rejected) {
-    if(promise instanceof Reject) {
-      processImmediate(function() {
-        rejected.call(promise, promise[PROMISE_VALUE])
-      })
-    }else {
-      var v = promise[PROMISE_VALUE], pendings = promise[PROMISE_PENDINGS];
-      if(pendings) {
-        pendings.push([fulfilled, rejected])
-      }else {
-        if(isPromise(v)) {
-          promiseWhen(v, fulfilled, rejected)
-        }else {
-          if(fulfilled) {
-            processImmediate(function() {
-              fulfilled.call(promise, v)
-            })
-          }
-        }
-      }
-    }
-  }
-  function Defer(promise) {
-    var self = this;
-    if(!(self instanceof Defer)) {
-      return new Defer(promise)
-    }
-    self.promise = promise || new Promise;
-    self.promise.defer = self
-  }
-  Defer.prototype = {constructor:Defer, resolve:function(value) {
-    var promise = this.promise, pendings;
-    if(!(pendings = promise[PROMISE_PENDINGS])) {
-      return null
-    }
-    promise[PROMISE_VALUE] = value;
-    pendings = [].concat(pendings);
-    promise[PROMISE_PENDINGS] = undefined;
-    promise[PROMISE_PROGRESS_LISTENERS] = undefined;
-    S.each(pendings, function(p) {
-      promiseWhen(promise, p[0], p[1])
-    });
-    return value
-  }, reject:function(reason) {
-    return this.resolve(new Reject(reason))
-  }, notify:function(message) {
-    S.each(this.promise[PROMISE_PROGRESS_LISTENERS], function(listener) {
-      processImmediate(function() {
-        listener(message)
-      })
-    })
-  }};
-  function isPromise(obj) {
-    return obj && obj instanceof Promise
-  }
-  function Promise(v) {
-    var self = this;
-    self[PROMISE_VALUE] = v;
-    if(v === undefined) {
-      self[PROMISE_PENDINGS] = [];
-      self[PROMISE_PROGRESS_LISTENERS] = []
-    }
-  }
-  Promise.prototype = {constructor:Promise, then:function(fulfilled, rejected, progressListener) {
-    if(progressListener) {
-      this.progress(progressListener)
-    }
-    return when(this, fulfilled, rejected)
-  }, progress:function(progressListener) {
-    if(this[PROMISE_PROGRESS_LISTENERS]) {
-      this[PROMISE_PROGRESS_LISTENERS].push(progressListener)
-    }
-    return this
-  }, fail:function(rejected) {
-    return when(this, 0, rejected)
-  }, fin:function(callback) {
-    return when(this, function(value) {
-      return callback(value, true)
-    }, function(reason) {
-      return callback(reason, false)
-    })
-  }, done:function(fulfilled, rejected) {
-    var self = this, onUnhandledError = function(e) {
-      S.log(e.stack || e, "error");
-      setTimeout(function() {
-        throw e;
-      }, 0)
-    }, promiseToHandle = fulfilled || rejected ? self.then(fulfilled, rejected) : self;
-    promiseToHandle.fail(onUnhandledError)
-  }, isResolved:function() {
-    return isResolved(this)
-  }, isRejected:function() {
-    return isRejected(this)
-  }};
-  function Reject(reason) {
-    if(reason instanceof Reject) {
-      return reason
-    }
-    var self = this;
-    Promise.apply(self, arguments);
-    if(self[PROMISE_VALUE] instanceof Promise) {
-      logger.error("assert.not(this.__promise_value instanceof promise) in Reject constructor")
-    }
-    return self
-  }
-  S.extend(Reject, Promise);
-  function when(value, fulfilled, rejected) {
-    var defer = new Defer, done = 0;
-    function _fulfilled(value) {
-      try {
-        return fulfilled ? fulfilled.call(this, value) : value
-      }catch(e) {
-        logError(e.stack || e);
-        return new Reject(e)
-      }
-    }
-    function _rejected(reason) {
-      try {
-        return rejected ? rejected.call(this, reason) : new Reject(reason)
-      }catch(e) {
-        logError(e.stack || e);
-        return new Reject(e)
-      }
-    }
-    function finalFulfill(value) {
-      if(done) {
-        logger.error("already done at fulfilled");
-        return
-      }
-      if(value instanceof Promise) {
-        logger.error("assert.not(value instanceof Promise) in when");
-        return
-      }
-      done = 1;
-      defer.resolve(_fulfilled.call(this, value))
-    }
-    if(value instanceof Promise) {
-      promiseWhen(value, finalFulfill, function(reason) {
-        if(done) {
-          logger.error("already done at rejected");
-          return
-        }
-        done = 1;
-        defer.resolve(_rejected.call(this, reason))
-      })
-    }else {
-      finalFulfill(value)
-    }
-    return defer.promise
-  }
-  function isResolved(obj) {
-    return!isRejected(obj) && isPromise(obj) && obj[PROMISE_PENDINGS] === undefined && (!isPromise(obj[PROMISE_VALUE]) || isResolved(obj[PROMISE_VALUE]))
-  }
-  function isRejected(obj) {
-    return isPromise(obj) && obj[PROMISE_PENDINGS] === undefined && obj[PROMISE_VALUE] instanceof Reject
-  }
-  KISSY.Defer = Defer;
-  KISSY.Promise = Promise;
-  Promise.Defer = Defer;
-  S.mix(Promise, {when:when, isPromise:isPromise, isResolved:isResolved, isRejected:isRejected, all:function(promises) {
-    var count = promises.length;
-    if(!count) {
-      return null
-    }
-    var defer = new Defer;
-    for(var i = 0;i < promises.length;i++) {
-      (function(promise, i) {
-        when(promise, function(value) {
-          promises[i] = value;
-          if(--count === 0) {
-            defer.resolve(promises)
-          }
-        }, function(r) {
-          defer.reject(r)
-        })
-      })(promises[i], i)
-    }
-    return defer.promise
-  }, async:function(generatorFunc) {
-    return function() {
-      var generator = generatorFunc.apply(this, arguments);
-      function doAction(action, arg) {
-        var result;
-        try {
-          result = generator[action](arg)
-        }catch(e) {
-          return new Reject(e)
-        }
-        if(result.done) {
-          return result.value
-        }
-        return when(result.value, next, throwEx)
-      }
-      function next(v) {
-        return doAction("next", v)
-      }
-      function throwEx(e) {
-        return doAction("throw", e)
-      }
-      return next()
-    }
-  }});
-  return Promise
-});
-
-/*
-Copyright 2013, KISSY v1.42
-MIT Licensed
-build time: Dec 4 22:04
-*/
-/*
- Combined processedModules by KISSY Module Compiler: 
-
- anim/timer/easing
- anim/timer/manager
- anim/timer/fx
- anim/timer/short-hand
- anim/timer/color
- anim/timer/transform
- anim/timer
-*/
-
-KISSY.add("anim/timer/easing", [], function() {
-  var PI = Math.PI, pow = Math.pow, sin = Math.sin, parseNumber = parseFloat, CUBIC_BEZIER_REG = /^cubic-bezier\(([^,]+),([^,]+),([^,]+),([^,]+)\)$/i, BACK_CONST = 1.70158;
-  function easeNone(t) {
-    return t
-  }
-  var Easing = {swing:function(t) {
-    return-Math.cos(t * PI) / 2 + 0.5
-  }, easeNone:easeNone, linear:easeNone, easeIn:function(t) {
-    return t * t
-  }, ease:cubicBezierFunction(0.25, 0.1, 0.25, 1), "ease-in":cubicBezierFunction(0.42, 0, 1, 1), "ease-out":cubicBezierFunction(0, 0, 0.58, 1), "ease-in-out":cubicBezierFunction(0.42, 0, 0.58, 1), "ease-out-in":cubicBezierFunction(0, 0.42, 1, 0.58), toFn:function(easingStr) {
-    var m;
-    if(m = easingStr.match(CUBIC_BEZIER_REG)) {
-      return cubicBezierFunction(parseNumber(m[1]), parseNumber(m[2]), parseNumber(m[3]), parseNumber(m[4]))
-    }
-    return Easing[easingStr] || easeNone
-  }, easeOut:function(t) {
-    return(2 - t) * t
-  }, easeBoth:function(t) {
-    return(t *= 2) < 1 ? 0.5 * t * t : 0.5 * (1 - --t * (t - 2))
-  }, easeInStrong:function(t) {
-    return t * t * t * t
-  }, easeOutStrong:function(t) {
-    return 1 - --t * t * t * t
-  }, easeBothStrong:function(t) {
-    return(t *= 2) < 1 ? 0.5 * t * t * t * t : 0.5 * (2 - (t -= 2) * t * t * t)
-  }, elasticIn:function(t) {
-    var p = 0.3, s = p / 4;
-    if(t === 0 || t === 1) {
-      return t
-    }
-    return-(pow(2, 10 * (t -= 1)) * sin((t - s) * 2 * PI / p))
-  }, elasticOut:function(t) {
-    var p = 0.3, s = p / 4;
-    if(t === 0 || t === 1) {
-      return t
-    }
-    return pow(2, -10 * t) * sin((t - s) * 2 * PI / p) + 1
-  }, elasticBoth:function(t) {
-    var p = 0.45, s = p / 4;
-    if(t === 0 || (t *= 2) === 2) {
-      return t
-    }
-    if(t < 1) {
-      return-0.5 * pow(2, 10 * (t -= 1)) * sin((t - s) * 2 * PI / p)
-    }
-    return pow(2, -10 * (t -= 1)) * sin((t - s) * 2 * PI / p) * 0.5 + 1
-  }, backIn:function(t) {
-    if(t === 1) {
-      t -= 0.001
-    }
-    return t * t * ((BACK_CONST + 1) * t - BACK_CONST)
-  }, backOut:function(t) {
-    return(t -= 1) * t * ((BACK_CONST + 1) * t + BACK_CONST) + 1
-  }, backBoth:function(t) {
-    var s = BACK_CONST;
-    var m = (s *= 1.525) + 1;
-    if((t *= 2) < 1) {
-      return 0.5 * t * t * (m * t - s)
-    }
-    return 0.5 * ((t -= 2) * t * (m * t + s) + 2)
-  }, bounceIn:function(t) {
-    return 1 - Easing.bounceOut(1 - t)
-  }, bounceOut:function(t) {
-    var s = 7.5625, r;
-    if(t < 1 / 2.75) {
-      r = s * t * t
-    }else {
-      if(t < 2 / 2.75) {
-        r = s * (t -= 1.5 / 2.75) * t + 0.75
-      }else {
-        if(t < 2.5 / 2.75) {
-          r = s * (t -= 2.25 / 2.75) * t + 0.9375
-        }else {
-          r = s * (t -= 2.625 / 2.75) * t + 0.984375
-        }
-      }
-    }
-    return r
-  }, bounceBoth:function(t) {
-    if(t < 0.5) {
-      return Easing.bounceIn(t * 2) * 0.5
-    }
-    return Easing.bounceOut(t * 2 - 1) * 0.5 + 0.5
-  }};
-  var ZERO_LIMIT = 1.0E-6, abs = Math.abs;
-  function cubicBezierFunction(p1x, p1y, p2x, p2y) {
-    var ax = 3 * p1x - 3 * p2x + 1, bx = 3 * p2x - 6 * p1x, cx = 3 * p1x;
-    var ay = 3 * p1y - 3 * p2y + 1, by = 3 * p2y - 6 * p1y, cy = 3 * p1y;
-    function sampleCurveDerivativeX(t) {
-      return(3 * ax * t + 2 * bx) * t + cx
-    }
-    function sampleCurveX(t) {
-      return((ax * t + bx) * t + cx) * t
-    }
-    function sampleCurveY(t) {
-      return((ay * t + by) * t + cy) * t
-    }
-    function solveCurveX(x) {
-      var t2 = x, derivative, x2;
-      for(var i = 0;i < 8;i++) {
-        x2 = sampleCurveX(t2) - x;
-        if(abs(x2) < ZERO_LIMIT) {
-          return t2
-        }
-        derivative = sampleCurveDerivativeX(t2);
-        if(abs(derivative) < ZERO_LIMIT) {
-          break
-        }
-        t2 -= x2 / derivative
-      }
-      var t1 = 1, t0 = 0;
-      t2 = x;
-      while(t1 > t0) {
-        x2 = sampleCurveX(t2) - x;
-        if(abs(x2) < ZERO_LIMIT) {
-          return t2
-        }
-        if(x2 > 0) {
-          t1 = t2
-        }else {
-          t0 = t2
-        }
-        t2 = (t1 + t0) / 2
-      }
-      return t2
-    }
-    function solve(x) {
-      return sampleCurveY(solveCurveX(x))
-    }
-    return solve
-  }
-  return Easing
-});
-KISSY.add("anim/timer/manager", [], function(S) {
-  var stamp = S.stamp, win = S.Env.host, INTERVAL = 15, requestAnimationFrameFn, cancelAnimationFrameFn;
-  if(0) {
-    requestAnimationFrameFn = win.requestAnimationFrame;
-    cancelAnimationFrameFn = win.cancelAnimationFrame;
-    var vendors = ["ms", "moz", "webkit", "o"];
-    for(var x = 0;x < vendors.length && !requestAnimationFrameFn;++x) {
-      requestAnimationFrameFn = win[vendors[x] + "RequestAnimationFrame"];
-      cancelAnimationFrameFn = win[vendors[x] + "CancelAnimationFrame"] || win[vendors[x] + "CancelRequestAnimationFrame"]
-    }
-  }else {
-    requestAnimationFrameFn = function(fn) {
-      return setTimeout(fn, INTERVAL)
-    };
-    cancelAnimationFrameFn = function(timer) {
-      clearTimeout(timer)
-    }
-  }
-  return{runnings:{}, timer:null, start:function(anim) {
-    var self = this, kv = stamp(anim);
-    if(self.runnings[kv]) {
+    return gRet
+  }, detach:function(cfg) {
+    var groupsRe, self = this, fn = cfg.fn, context = cfg.context, currentTarget = self.currentTarget, observers = self.observers, groups = cfg.groups;
+    if(!observers.length) {
       return
     }
-    self.runnings[kv] = anim;
-    self.startTimer()
-  }, stop:function(anim) {
-    this.notRun(anim)
-  }, notRun:function(anim) {
-    var self = this, kv = stamp(anim);
-    delete self.runnings[kv];
-    if(S.isEmptyObject(self.runnings)) {
-      self.stopTimer()
+    if(groups) {
+      groupsRe = Utils.getGroupsRe(groups)
     }
-  }, pause:function(anim) {
-    this.notRun(anim)
-  }, resume:function(anim) {
-    this.start(anim)
-  }, startTimer:function() {
-    var self = this;
-    if(!self.timer) {
-      self.timer = requestAnimationFrameFn(function run() {
-        if(self.runFrames()) {
-          self.stopTimer()
-        }else {
-          self.timer = requestAnimationFrameFn(run)
-        }
-      })
-    }
-  }, stopTimer:function() {
-    var self = this, t = self.timer;
-    if(t) {
-      cancelAnimationFrameFn(t);
-      self.timer = 0
-    }
-  }, runFrames:function() {
-    var self = this, r, flag, runnings = self.runnings;
-    for(r in runnings) {
-      runnings[r].frame()
-    }
-    for(r in runnings) {
-      flag = 0;
-      break
-    }
-    return flag === undefined
-  }}
-});
-KISSY.add("anim/timer/fx", ["dom"], function(S, require) {
-  var logger = S.getLogger("s/aim/timer/fx");
-  var Dom = require("dom");
-  function load(self, cfg) {
-    S.mix(self, cfg);
-    self.pos = 0;
-    self.unit = self.unit || ""
-  }
-  function Fx(cfg) {
-    load(this, cfg)
-  }
-  Fx.prototype = {isCustomFx:0, constructor:Fx, load:function(cfg) {
-    load(this, cfg)
-  }, frame:function(pos) {
-    if(this.pos === 1) {
-      return
-    }
-    var self = this, anim = self.anim, prop = self.prop, node = anim.node, from = self.from, propData = self.propData, to = self.to;
-    if(pos === undefined) {
-      pos = getPos(anim, propData)
-    }
-    self.pos = pos;
-    if(from === to || pos === 0) {
-      return
-    }
-    var val = self.interpolate(from, to, self.pos);
-    self.val = val;
-    if(propData.frame) {
-      propData.frame.call(self, anim, self)
-    }else {
-      if(!self.isCustomFx) {
-        if(val === undefined) {
-          self.pos = 1;
-          val = to;
-          logger.warn(prop + " update directly ! : " + val + " : " + from + " : " + to)
-        }else {
-          val += self.unit
-        }
-        self.val = val;
-        if(self.type === "attr") {
-          Dom.attr(node, prop, val, 1)
-        }else {
-          Dom.css(node, prop, val)
+    var i, j, t, observer, observerContext, len = observers.length;
+    if(fn || groupsRe) {
+      context = context || currentTarget;
+      for(i = 0, j = 0, t = [];i < len;++i) {
+        observer = observers[i];
+        observerContext = observer.context || currentTarget;
+        if(context !== observerContext || fn && fn !== observer.fn || groupsRe && !observer.groups.match(groupsRe)) {
+          t[j++] = observer
         }
       }
-    }
-  }, interpolate:function(from, to, pos) {
-    if(typeof from === "number" && typeof to === "number") {
-      return Math.round((from + (to - from) * pos) * 1E5) / 1E5
+      self.observers = t
     }else {
-      return undefined
-    }
-  }, cur:function() {
-    var self = this, prop = self.prop, type, parsed, r, node = self.anim.node;
-    if(self.isCustomFx) {
-      return node[prop] || 0
-    }
-    if(!(type = self.type)) {
-      type = self.type = isAttr(node, prop) ? "attr" : "css"
-    }
-    if(type === "attr") {
-      r = Dom.attr(node, prop, undefined, 1)
-    }else {
-      r = Dom.css(node, prop)
-    }
-    return isNaN(parsed = parseFloat(r)) ? !r || r === "auto" ? 0 : r : parsed
-  }};
-  function isAttr(node, prop) {
-    if((!node.style || node.style[prop] == null) && Dom.attr(node, prop, undefined, 1) != null) {
-      return 1
-    }
-    return 0
-  }
-  function getPos(anim, propData) {
-    var t = S.now(), runTime, startTime = anim.startTime, delay = propData.delay, duration = propData.duration;
-    runTime = t - startTime - delay;
-    if(runTime <= 0) {
-      return 0
-    }else {
-      if(runTime >= duration) {
-        return 1
-      }else {
-        return propData.easing(runTime / duration)
-      }
-    }
-  }
-  Fx.Factories = {};
-  Fx.FxTypes = {};
-  Fx.getFx = function(cfg) {
-    var Constructor = Fx, fxType, SubClass;
-    if(fxType = cfg.fxType) {
-      Constructor = Fx.FxTypes[fxType]
-    }else {
-      if(!cfg.isCustomFx && (SubClass = Fx.Factories[cfg.prop])) {
-        Constructor = SubClass
-      }
-    }
-    return new Constructor(cfg)
-  };
-  return Fx
-});
-KISSY.add("anim/timer/short-hand", [], function() {
-  return{background:[], border:["borderBottomWidth", "borderLeftWidth", "borderRightWidth", "borderTopWidth"], borderBottom:["borderBottomWidth"], borderLeft:["borderLeftWidth"], borderTop:["borderTopWidth"], borderRight:["borderRightWidth"], font:["fontSize", "fontWeight"], margin:["marginBottom", "marginLeft", "marginRight", "marginTop"], padding:["paddingBottom", "paddingLeft", "paddingRight", "paddingTop"]}
-});
-KISSY.add("anim/timer/color", ["./fx", "./short-hand"], function(S, require) {
-  var Fx = require("./fx");
-  var SHORT_HANDS = require("./short-hand");
-  var logger = S.getLogger("s/anim/timer/color");
-  var HEX_BASE = 16, floor = Math.floor, KEYWORDS = {black:[0, 0, 0], silver:[192, 192, 192], gray:[128, 128, 128], white:[255, 255, 255], maroon:[128, 0, 0], red:[255, 0, 0], purple:[128, 0, 128], fuchsia:[255, 0, 255], green:[0, 128, 0], lime:[0, 255, 0], olive:[128, 128, 0], yellow:[255, 255, 0], navy:[0, 0, 128], blue:[0, 0, 255], teal:[0, 128, 128], aqua:[0, 255, 255]}, RE_RGB = /^rgb\(([0-9]+)\s*,\s*([0-9]+)\s*,\s*([0-9]+)\)$/i, RE_RGBA = /^rgba\(([0-9]+)\s*,\s*([0-9]+)\s*,\s*([0-9]+),\s*([0-9]+)\)$/i, 
-  RE_HEX = /^#?([0-9A-F]{1,2})([0-9A-F]{1,2})([0-9A-F]{1,2})$/i, COLORS = ["backgroundColor", "borderBottomColor", "borderLeftColor", "borderRightColor", "borderTopColor", "color", "outlineColor"];
-  SHORT_HANDS.background.push("backgroundColor");
-  SHORT_HANDS.borderColor = ["borderBottomColor", "borderLeftColor", "borderRightColor", "borderTopColor"];
-  SHORT_HANDS.border.push("borderBottomColor", "borderLeftColor", "borderRightColor", "borderTopColor");
-  SHORT_HANDS.borderBottom.push("borderBottomColor");
-  SHORT_HANDS.borderLeft.push("borderLeftColor");
-  SHORT_HANDS.borderRight.push("borderRightColor");
-  SHORT_HANDS.borderTop.push("borderTopColor");
-  function numericColor(val) {
-    val = val + "";
-    var match;
-    if(match = val.match(RE_RGB)) {
-      return[parseInt(match[1]), parseInt(match[2]), parseInt(match[3])]
-    }else {
-      if(match = val.match(RE_RGBA)) {
-        return[parseInt(match[1]), parseInt(match[2]), parseInt(match[3]), parseInt(match[4])]
-      }else {
-        if(match = val.match(RE_HEX)) {
-          for(var i = 1;i < match.length;i++) {
-            if(match[i].length < 2) {
-              match[i] += match[i]
-            }
-          }
-          return[parseInt(match[1], HEX_BASE), parseInt(match[2], HEX_BASE), parseInt(match[3], HEX_BASE)]
-        }
-      }
-    }
-    if(KEYWORDS[val = val.toLowerCase()]) {
-      return KEYWORDS[val]
-    }
-    logger.warn("only allow rgb or hex color string : " + val);
-    return[255, 255, 255]
-  }
-  function ColorFx() {
-    ColorFx.superclass.constructor.apply(this, arguments)
-  }
-  S.extend(ColorFx, Fx, {load:function() {
-    var self = this;
-    ColorFx.superclass.load.apply(self, arguments);
-    if(self.from) {
-      self.from = numericColor(self.from)
-    }
-    if(self.to) {
-      self.to = numericColor(self.to)
-    }
-  }, interpolate:function(from, to, pos) {
-    var interpolate = ColorFx.superclass.interpolate;
-    if(from.length === 3 && to.length === 3) {
-      return"rgb(" + [floor(interpolate(from[0], to[0], pos)), floor(interpolate(from[1], to[1], pos)), floor(interpolate(from[2], to[2], pos))].join(", ") + ")"
-    }else {
-      if(from.length === 4 || to.length === 4) {
-        return"rgba(" + [floor(interpolate(from[0], to[0], pos)), floor(interpolate(from[1], to[1], pos)), floor(interpolate(from[2], to[2], pos)), floor(interpolate(from[3] || 1, to[3] || 1, pos))].join(", ") + ")"
-      }else {
-        logger.warn("unknown value : " + from);
-        return undefined
-      }
+      self.reset()
     }
   }});
-  S.each(COLORS, function(color) {
-    Fx.Factories[color] = ColorFx
-  });
-  Fx.FxTypes.color = ColorFx;
-  return ColorFx
+  return CustomEventObservable
 });
-KISSY.add("anim/timer/transform", ["dom", "./fx"], function(S, require) {
-  var Dom = require("dom");
-  var Fx = require("./fx");
-  var translateTpl = S.Features.isTransform3dSupported() ? "translate3d({translateX}px,{translateY}px,0)" : "translate({translateX}px,{translateY}px)";
-  function toMatrixArray(matrix) {
-    matrix = matrix.split(/,/);
-    matrix = S.map(matrix, function(v) {
-      return myParse(v)
-    });
-    return matrix
-  }
-  function decomposeMatrix(matrix) {
-    matrix = toMatrixArray(matrix);
-    var scaleX, scaleY, skew, A = matrix[0], B = matrix[1], C = matrix[2], D = matrix[3];
-    if(A * D - B * C) {
-      scaleX = Math.sqrt(A * A + B * B);
-      skew = (A * C + B * D) / (A * D - C * B);
-      scaleY = (A * D - B * C) / scaleX;
-      if(A * D < B * C) {
-        skew = -skew;
-        scaleX = -scaleX
-      }
-    }else {
-      scaleX = scaleY = skew = 0
+KISSY.add("event/custom/target", ["event/base", "./observable"], function(S, require) {
+  var BaseEvent = require("event/base");
+  var CustomEventObservable = require("./observable");
+  var Utils = BaseEvent.Utils, splitAndRun = Utils.splitAndRun, KS_BUBBLE_TARGETS = "__~ks_bubble_targets";
+  var KS_CUSTOM_EVENTS = "__~ks_custom_events";
+  return{isTarget:1, getCustomEventObservable:function(type, create) {
+    var target = this, customEvent, customEventObservables = target.getCustomEvents();
+    customEvent = customEventObservables && customEventObservables[type];
+    if(!customEvent && create) {
+      customEvent = customEventObservables[type] = new CustomEventObservable({currentTarget:target, type:type})
     }
-    return{translateX:myParse(matrix[4]), translateY:myParse(matrix[5]), rotate:myParse(Math.atan2(B, A) * 180 / Math.PI), skewX:myParse(Math.atan(skew) * 180 / Math.PI), skewY:0, scaleX:myParse(scaleX), scaleY:myParse(scaleY)}
-  }
-  function defaultDecompose() {
-    return{translateX:0, translateY:0, rotate:0, skewX:0, skewY:0, scaleX:1, scaleY:1}
-  }
-  function myParse(v) {
-    return Math.round(parseFloat(v) * 1E5) / 1E5
-  }
-  function getTransformInfo(transform) {
-    transform = transform.split(")");
-    var trim = S.trim, i = -1, l = transform.length - 1, split, prop, val, ret = defaultDecompose();
-    while(++i < l) {
-      split = transform[i].split("(");
-      prop = trim(split[0]);
-      val = split[1];
-      switch(prop) {
-        case "translateX":
-        ;
-        case "translateY":
-        ;
-        case "scaleX":
-        ;
-        case "scaleY":
-          ret[prop] = myParse(val);
-          break;
-        case "rotate":
-        ;
-        case "skewX":
-        ;
-        case "skewY":
-          var v = myParse(val);
-          if(!S.endsWith(val, "deg")) {
-            v = v * 180 / Math.PI
+    return customEvent
+  }, fire:function(type, eventData) {
+    var self = this, ret, targets = self.getTargets(), hasTargets = targets && targets.length;
+    eventData = eventData || {};
+    splitAndRun(type, function(type) {
+      var r2, customEventObservable;
+      Utils.fillGroupsForEvent(type, eventData);
+      type = eventData.type;
+      customEventObservable = self.getCustomEventObservable(type);
+      if(!customEventObservable && !hasTargets) {
+        return
+      }
+      if(customEventObservable) {
+        if(!customEventObservable.hasObserver() && !customEventObservable.defaultFn) {
+          if(customEventObservable.bubbles && !hasTargets || !customEventObservable.bubbles) {
+            return
           }
-          ret[prop] = v;
-          break;
-        case "translate":
-        ;
-        case "translate3d":
-          val = val.split(",");
-          ret.translateX = myParse(val[0]);
-          ret.translateY = myParse(val[1] || 0);
-          break;
-        case "scale":
-          val = val.split(",");
-          ret.scaleX = myParse(val[0]);
-          ret.scaleY = myParse(val[1] || val[0]);
-          break;
-        case "matrix":
-          return decomposeMatrix(val)
+        }
+      }else {
+        customEventObservable = new CustomEventObservable({currentTarget:self, type:type})
       }
-    }
+      r2 = customEventObservable.fire(eventData);
+      if(ret !== false && r2 !== undefined) {
+        ret = r2
+      }
+    });
     return ret
-  }
-  function TransformFx() {
-    TransformFx.superclass.constructor.apply(this, arguments)
-  }
-  S.extend(TransformFx, Fx, {load:function() {
+  }, publish:function(type, cfg) {
+    var customEventObservable, self = this;
+    splitAndRun(type, function(t) {
+      customEventObservable = self.getCustomEventObservable(t, true);
+      S.mix(customEventObservable, cfg)
+    });
+    return self
+  }, addTarget:function(anotherTarget) {
+    var self = this, targets = self.getTargets();
+    if(!S.inArray(anotherTarget, targets)) {
+      targets.push(anotherTarget)
+    }
+    return self
+  }, removeTarget:function(anotherTarget) {
+    var self = this, targets = self.getTargets(), index = S.indexOf(anotherTarget, targets);
+    if(index !== -1) {
+      targets.splice(index, 1)
+    }
+    return self
+  }, getTargets:function() {
+    return this[KS_BUBBLE_TARGETS] || (this[KS_BUBBLE_TARGETS] = [])
+  }, getCustomEvents:function() {
+    return this[KS_CUSTOM_EVENTS] || (this[KS_CUSTOM_EVENTS] = {})
+  }, on:function(type, fn, context) {
     var self = this;
-    TransformFx.superclass.load.apply(self, arguments);
-    self.from = Dom.style(self.anim.node, "transform") || self.from;
-    if(self.from && self.from !== "none") {
-      self.from = getTransformInfo(self.from)
-    }else {
-      self.from = defaultDecompose()
-    }
-    if(self.to) {
-      self.to = getTransformInfo(self.to)
-    }else {
-      self.to = defaultDecompose()
-    }
-  }, interpolate:function(from, to, pos) {
-    var interpolate = TransformFx.superclass.interpolate;
-    var ret = {};
-    ret.translateX = interpolate(from.translateX, to.translateX, pos);
-    ret.translateY = interpolate(from.translateY, to.translateY, pos);
-    ret.rotate = interpolate(from.rotate, to.rotate, pos);
-    ret.skewX = interpolate(from.skewX, to.skewX, pos);
-    ret.skewY = interpolate(from.skewY, to.skewY, pos);
-    ret.scaleX = interpolate(from.scaleX, to.scaleX, pos);
-    ret.scaleY = interpolate(from.scaleY, to.scaleY, pos);
-    return S.substitute(translateTpl + " " + "rotate({rotate}deg) " + "skewX({skewX}deg) " + "skewY({skewY}deg) " + "scale({scaleX},{scaleY})", ret)
-  }});
-  Fx.Factories.transform = TransformFx;
-  return TransformFx
-});
-KISSY.add("anim/timer", ["dom", "./base", "./timer/easing", "./timer/manager", "./timer/fx", "./timer/short-hand", "./timer/color", "./timer/transform"], function(S, require) {
-  var Dom = require("dom");
-  var AnimBase = require("./base");
-  var Easing = require("./timer/easing");
-  var AM = require("./timer/manager");
-  var Fx = require("./timer/fx");
-  var SHORT_HANDS = require("./timer/short-hand");
-  require("./timer/color");
-  require("./timer/transform");
-  var camelCase = Dom._camelCase, NUMBER_REG = /^([+\-]=)?([\d+.\-]+)([a-z%]*)$/i;
-  function Anim() {
-    var self = this, to;
-    Anim.superclass.constructor.apply(self, arguments);
-    S.each(to = self.to, function(v, prop) {
-      var camelProp = camelCase(prop);
-      if(prop !== camelProp) {
-        to[camelProp] = to[prop];
-        delete to[prop]
+    Utils.batchForType(function(type, fn, context) {
+      var cfg = Utils.normalizeParam(type, fn, context), customEvent;
+      type = cfg.type;
+      customEvent = self.getCustomEventObservable(type, true);
+      if(customEvent) {
+        customEvent.on(cfg)
       }
-    })
-  }
-  S.extend(Anim, AnimBase, {prepareFx:function() {
-    var self = this, node = self.node, _propsData = self._propsData;
-    S.each(_propsData, function(_propData) {
-      _propData.duration *= 1E3;
-      _propData.delay *= 1E3;
-      if(typeof _propData.easing === "string") {
-        _propData.easing = Easing.toFn(_propData.easing)
-      }
-    });
-    S.each(SHORT_HANDS, function(shortHands, p) {
-      var origin, _propData = _propsData[p], val;
-      if(_propData) {
-        val = _propData.value;
-        origin = {};
-        S.each(shortHands, function(sh) {
-          origin[sh] = Dom.css(node, sh)
-        });
-        Dom.css(node, p, val);
-        S.each(origin, function(val, sh) {
-          if(!(sh in _propsData)) {
-            _propsData[sh] = S.merge(_propData, {value:Dom.css(node, sh)})
-          }
-          Dom.css(node, sh, val)
-        });
-        delete _propsData[p]
-      }
-    });
-    var prop, _propData, val, to, from, propCfg, fx, isCustomFx = 0, unit, parts;
-    if(S.isPlainObject(node)) {
-      isCustomFx = 1
-    }
-    for(prop in _propsData) {
-      _propData = _propsData[prop];
-      val = _propData.value;
-      propCfg = {isCustomFx:isCustomFx, prop:prop, anim:self, fxType:_propData.fxType, type:_propData.type, propData:_propData};
-      fx = Fx.getFx(propCfg);
-      to = val;
-      from = fx.cur();
-      val += "";
-      unit = "";
-      parts = val.match(NUMBER_REG);
-      if(parts) {
-        to = parseFloat(parts[2]);
-        unit = parts[3];
-        if(unit && unit !== "px" && from) {
-          var tmpCur = 0, to2 = to;
-          do {
-            ++to2;
-            Dom.css(node, prop, to2 + unit);
-            tmpCur = fx.cur()
-          }while(tmpCur === 0);
-          from = to2 / tmpCur * from;
-          Dom.css(node, prop, from + unit)
+    }, 0, type, fn, context);
+    return self
+  }, detach:function(type, fn, context) {
+    var self = this;
+    Utils.batchForType(function(type, fn, context) {
+      var cfg = Utils.normalizeParam(type, fn, context), customEvents, customEvent;
+      type = cfg.type;
+      if(type) {
+        customEvent = self.getCustomEventObservable(type, true);
+        if(customEvent) {
+          customEvent.detach(cfg)
         }
-        if(parts[1]) {
-          to = (parts[1] === "-=" ? -1 : 1) * to + from
-        }
-      }
-      propCfg.from = from;
-      propCfg.to = to;
-      propCfg.unit = unit;
-      fx.load(propCfg);
-      _propData.fx = fx
-    }
-  }, frame:function() {
-    var self = this, prop, end = 1, fx, _propData, _propsData = self._propsData;
-    for(prop in _propsData) {
-      _propData = _propsData[prop];
-      fx = _propData.fx;
-      fx.frame();
-      if(self.isRejected() || self.isResolved()) {
-        return
-      }
-      end &= fx.pos === 1
-    }
-    var currentTime = S.now(), duration = self.config.duration * 1E3, remaining = Math.max(0, self.startTime + duration - currentTime), temp = remaining / duration || 0, percent = 1 - temp;
-    self.defer.notify([self, percent, remaining]);
-    if(end) {
-      self.stop(end)
-    }
-  }, doStop:function(finish) {
-    var self = this, prop, fx, _propData, _propsData = self._propsData;
-    AM.stop(self);
-    if(finish) {
-      for(prop in _propsData) {
-        _propData = _propsData[prop];
-        fx = _propData.fx;
-        if(fx) {
-          fx.frame(1)
-        }
-      }
-    }
-  }, doStart:function() {
-    AM.start(this)
-  }});
-  Anim.Easing = Easing;
-  Anim.Fx = Fx;
-  return Anim
-});
-
-/*
-Copyright 2014, KISSY v1.42
-MIT Licensed
-build time: Feb 25 18:29
-*/
-/*
- Combined processedModules by KISSY Module Compiler: 
-
- anim/transition
-*/
-
-KISSY.add("anim/transition", ["dom", "event/dom", "./base"], function(S, require) {
-  var Dom = require("dom");
-  var Event = require("event/dom");
-  var AnimBase = require("./base");
-  var Features = S.Features;
-  var vendorPrefix = Features.getVendorCssPropPrefix("transition");
-  var R_UPPER = /([A-Z]|^ms)/g;
-  var TRANSITION_END_EVENT = vendorPrefix ? vendorPrefix.toLowerCase() + "TransitionEnd" : "transitionend webkitTransitionEnd";
-  var TRANSITION = Features.getVendorCssPropName("transition");
-  function genTransition(propsData) {
-    var str = "";
-    S.each(propsData, function(propData, prop) {
-      if(str) {
-        str += ","
-      }
-      str += prop + " " + propData.duration + "s " + propData.easing + " " + propData.delay + "s"
-    });
-    return str
-  }
-  function TransitionAnim() {
-    TransitionAnim.superclass.constructor.apply(this, arguments)
-  }
-  S.extend(TransitionAnim, AnimBase, {doStart:function() {
-    var self = this, node = self.node, elStyle = node.style, _propsData = self._propsData, original = elStyle[TRANSITION], transform, propsCss = {};
-    if(transform = _propsData.transform) {
-      delete _propsData.transform;
-      _propsData[Features.getVendorCssPropName("transform").replace(R_UPPER, "-$1").toLowerCase()] = transform
-    }
-    S.each(_propsData, function(propData, prop) {
-      var v = propData.value, currentValue = Dom.css(node, prop);
-      if(typeof v === "number") {
-        currentValue = parseFloat(currentValue)
-      }
-      if(currentValue === v) {
-        setTimeout(function() {
-          self._onTransitionEnd({originalEvent:{propertyName:prop}})
-        }, 0)
-      }
-      propsCss[prop] = v
-    });
-    if(original.indexOf("none") !== -1) {
-      original = ""
-    }else {
-      if(original) {
-        original += ","
-      }
-    }
-    elStyle[TRANSITION] = original + genTransition(_propsData);
-    Event.on(node, TRANSITION_END_EVENT, self._onTransitionEnd, self);
-    Dom.css(node, propsCss)
-  }, beforeResume:function() {
-    var self = this, propsData = self._propsData, tmpPropsData = S.merge(propsData), runTime = self._runTime / 1E3;
-    S.each(tmpPropsData, function(propData, prop) {
-      var tRunTime = runTime;
-      if(propData.delay >= tRunTime) {
-        propData.delay -= tRunTime
       }else {
-        tRunTime -= propData.delay;
-        propData.delay = 0;
-        if(propData.duration >= tRunTime) {
-          propData.duration -= tRunTime
-        }else {
-          delete propsData[prop]
-        }
+        customEvents = self.getCustomEvents();
+        S.each(customEvents, function(customEvent) {
+          customEvent.detach(cfg)
+        })
       }
-    })
-  }, _onTransitionEnd:function(e) {
-    e = e.originalEvent;
-    var self = this, allCompleted = 1, propsData = self._propsData;
-    if(!propsData[e.propertyName]) {
-      return
-    }
-    if(propsData[e.propertyName].pos === 1) {
-      return
-    }
-    propsData[e.propertyName].pos = 1;
-    S.each(propsData, function(propData) {
-      if(propData.pos !== 1) {
-        allCompleted = 0;
-        return false
-      }
-      return undefined
-    });
-    if(allCompleted) {
-      self.stop(true)
-    }
-  }, doStop:function(finish) {
-    var self = this, node = self.node, elStyle = node.style, _propsData = self._propsData, propList = [], clear, propsCss = {};
-    Event.detach(node, TRANSITION_END_EVENT, self._onTransitionEnd, self);
-    S.each(_propsData, function(propData, prop) {
-      if(!finish) {
-        propsCss[prop] = Dom.css(node, prop)
-      }
-      propList.push(prop)
-    });
-    clear = S.trim(elStyle[TRANSITION].replace(new RegExp("(^|,)" + "\\s*(?:" + propList.join("|") + ")\\s+[^,]+", "gi"), "$1")).replace(/^,|,,|,$/g, "") || "none";
-    elStyle[TRANSITION] = clear;
-    Dom.css(node, propsCss)
-  }});
-  return TransitionAnim
+    }, 0, type, fn, context);
+    return self
+  }}
 });
-
-/*
-Copyright 2013, KISSY v1.42
-MIT Licensed
-build time: Dec 4 22:16
-*/
-/*
- Combined processedModules by KISSY Module Compiler: 
-
- event
-*/
-
-KISSY.add("event", ["event/dom", "event/custom"], function(S, require) {
-  var DomEvent = require("event/dom");
-  var CustomEvent = require("event/custom");
-  var Event = S.Event = S.merge(DomEvent, {DomEvent:DomEvent, CustomEvent:CustomEvent});
-  Event.global = CustomEvent.global;
-  S.EventTarget = Event.Target = CustomEvent.Target;
-  return Event
+KISSY.add("event/custom", ["./custom/target"], function(S, require) {
+  var Target = require("./custom/target");
+  return{Target:Target, global:S.mix({}, Target)}
 });
 
 /*
@@ -6616,1255 +4293,224 @@ KISSY.add("io", ["io/form-serializer", "io/base", "io/xhr-transport", "io/script
 /*
 Copyright 2013, KISSY v1.42
 MIT Licensed
-build time: Dec 4 22:05
+build time: Dec 4 22:17
 */
 /*
  Combined processedModules by KISSY Module Compiler: 
 
- cookie
+ promise
 */
 
-KISSY.add("cookie", [], function(S) {
-  var doc = S.Env.host.document, MILLISECONDS_OF_DAY = 24 * 60 * 60 * 1E3, encode = encodeURIComponent, decode = S.urlDecode;
-  function isNotEmptyString(val) {
-    return typeof val === "string" && val !== ""
+KISSY.add("promise", [], function(S) {
+  var logger = S.getLogger("s/promise");
+  var PROMISE_VALUE = "__promise_value", processImmediate = S.setImmediate, PROMISE_PROGRESS_LISTENERS = "__promise_progress_listeners", PROMISE_PENDINGS = "__promise_pendings";
+  function logError(str) {
+    if(typeof console !== "undefined" && console.error) {
+      console.error(str)
+    }
   }
-  S.Cookie = {get:function(name) {
-    var ret, m;
-    if(isNotEmptyString(name)) {
-      if(m = String(doc.cookie).match(new RegExp("(?:^| )" + name + "(?:(?:=([^;]*))|;|$)"))) {
-        ret = m[1] ? decode(m[1]) : ""
-      }
-    }
-    return ret
-  }, set:function(name, val, expires, domain, path, secure) {
-    var text = String(encode(val)), date = expires;
-    if(typeof date === "number") {
-      date = new Date;
-      date.setTime(date.getTime() + expires * MILLISECONDS_OF_DAY)
-    }
-    if(date instanceof Date) {
-      text += "; expires=" + date.toUTCString()
-    }
-    if(isNotEmptyString(domain)) {
-      text += "; domain=" + domain
-    }
-    if(isNotEmptyString(path)) {
-      text += "; path=" + path
-    }
-    if(secure) {
-      text += "; secure"
-    }
-    doc.cookie = name + "=" + text
-  }, remove:function(name, domain, path, secure) {
-    this.set(name, "", -1, domain, path, secure)
-  }};
-  return S.Cookie
-});
-
-/*
-Copyright 2013, KISSY v1.42
-MIT Licensed
-build time: Dec 4 22:19
-*/
-/*
- Combined processedModules by KISSY Module Compiler: 
-
- xtemplate
-*/
-
-KISSY.add("xtemplate", ["xtemplate/runtime", "xtemplate/compiler"], function(S, require) {
-  var XTemplateRuntime = require("xtemplate/runtime");
-  var compiler = require("xtemplate/compiler");
-  var cache = XTemplate.cache = {};
-  function compile(tpl, config) {
-    var fn;
-    if(config.cache && (fn = cache[tpl])) {
-      return fn
-    }
-    fn = compiler.compileToFn(tpl, config);
-    if(config.cache) {
-      cache[tpl] = fn
-    }
-    return fn
-  }
-  var defaultCfg = {cache:true};
-  function XTemplate(tpl, config) {
-    var self = this;
-    config = S.merge(defaultCfg, config);
-    if(typeof tpl === "string") {
-      tpl = compile(tpl, config)
-    }
-    XTemplate.superclass.constructor.call(self, tpl, config)
-  }
-  S.extend(XTemplate, XTemplateRuntime, {}, {compiler:compiler, Scope:XTemplateRuntime.Scope, RunTime:XTemplateRuntime, addCommand:XTemplateRuntime.addCommand, removeCommand:XTemplateRuntime.removeCommand});
-  return XTemplate
-});
-
-/*
-Copyright 2013, KISSY v1.42
-MIT Licensed
-build time: Dec 4 22:19
-*/
-/*
- Combined processedModules by KISSY Module Compiler: 
-
- xtemplate/runtime/scope
- xtemplate/runtime/commands
- xtemplate/runtime
-*/
-
-KISSY.add("xtemplate/runtime/scope", [], function(S) {
-  function Scope(data, affix) {
-    this.data = data || {};
-    this.affix = affix;
-    this.root = this
-  }
-  Scope.prototype = {isScope:1, setParent:function(parentScope) {
-    this.parent = parentScope;
-    this.root = parentScope.root
-  }, getParent:function() {
-    return this.parent
-  }, getRoot:function() {
-    return this.root
-  }, set:function(name, value) {
-    if(!this.affix) {
-      this.affix = {}
-    }
-    this.affix[name] = value
-  }, setData:function(data) {
-    this.data = data
-  }, getData:function() {
-    return this.data
-  }, mix:function(v) {
-    if(!this.affix) {
-      this.affix = {}
-    }
-    S.mix(this.affix, v)
-  }, has:function(name) {
-    var data = this.data;
-    var affix = this.affix;
-    if(affix && name in affix) {
-      return true
-    }
-    return typeof data === "object" && name in data
-  }, get:function(name) {
-    var data = this.data;
-    var affix = this.affix;
-    if(affix && name in affix) {
-      return affix[name]
-    }
-    if(typeof data === "object" && name in data) {
-      return data[name]
-    }
-    return undefined
-  }, resolve:function(name, depth) {
-    if(name === ".") {
-      name = "this"
-    }
-    var parts = name.split(".");
-    var scope = this, len, i, v, p, valid;
-    if(parts[0] === "root") {
-      parts.shift();
-      scope = scope.root
+  function promiseWhen(promise, fulfilled, rejected) {
+    if(promise instanceof Reject) {
+      processImmediate(function() {
+        rejected.call(promise, promise[PROMISE_VALUE])
+      })
     }else {
-      if(depth) {
-        while(scope && depth--) {
-          scope = scope.parent
-        }
-      }
-    }
-    var endScopeFind = 0;
-    len = parts.length;
-    while(scope) {
-      valid = 1;
-      v = scope;
-      for(i = 0;i < len;i++) {
-        p = parts[i];
-        if(p === "this") {
-          endScopeFind = 1;
-          continue
-        }
-        if(v === scope) {
-          if(!scope.has(p)) {
-            valid = 0;
-            break
-          }
-          v = scope.get(p)
-        }else {
-          if(typeof v !== "object" || !(p in v)) {
-            valid = 0;
-            break
-          }
-          v = v[p]
-        }
-      }
-      if(valid) {
-        if(v && v.isScope) {
-          v = v.data
-        }
-        if(typeof v === "function") {
-          v = v.call(this.data)
-        }
-        return[v]
-      }
-      if(endScopeFind) {
-        break
-      }
-      scope = scope.parent
-    }
-    return false
-  }};
-  return Scope
-});
-KISSY.add("xtemplate/runtime/commands", ["path", "./scope"], function(S, require) {
-  var commands;
-  var Path = require("path");
-  var Scope = require("./scope");
-  commands = {each:function(scope, config) {
-    var params = config.params;
-    var param0 = params[0];
-    var xindexName = params[2] || "xindex";
-    var valueName = params[1];
-    var buffer = "";
-    var xcount;
-    var opScope;
-    var affix;
-    if(param0) {
-      opScope = new Scope;
-      if(S.isArray(param0)) {
-        xcount = param0.length;
-        for(var xindex = 0;xindex < xcount;xindex++) {
-          opScope.data = param0[xindex];
-          affix = opScope.affix = {xcount:xcount};
-          affix[xindexName] = xindex;
-          if(valueName) {
-            affix[valueName] = param0[xindex]
-          }
-          opScope.setParent(scope);
-          buffer += config.fn(opScope)
-        }
+      var v = promise[PROMISE_VALUE], pendings = promise[PROMISE_PENDINGS];
+      if(pendings) {
+        pendings.push([fulfilled, rejected])
       }else {
-        for(var name in param0) {
-          opScope.data = param0[name];
-          affix = opScope.affix = {};
-          affix[xindexName] = name;
-          if(valueName) {
-            affix[valueName] = param0[name]
-          }
-          opScope.setParent(scope);
-          buffer += config.fn(opScope)
-        }
-      }
-    }else {
-      if(config.inverse) {
-        buffer = config.inverse(scope)
-      }
-    }
-    return buffer
-  }, "with":function(scope, config) {
-    var params = config.params;
-    var param0 = params[0];
-    var buffer = "";
-    if(param0) {
-      var opScope = new Scope(param0);
-      opScope.setParent(scope);
-      buffer = config.fn(opScope)
-    }else {
-      if(config.inverse) {
-        buffer = config.inverse(scope)
-      }
-    }
-    return buffer
-  }, "if":function(scope, config) {
-    var params = config.params;
-    var param0 = params[0];
-    var buffer = "";
-    if(param0) {
-      if(config.fn) {
-        buffer = config.fn(scope)
-      }
-    }else {
-      if(config.inverse) {
-        buffer = config.inverse(scope)
-      }
-    }
-    return buffer
-  }, set:function(scope, config) {
-    scope.mix(config.hash);
-    return""
-  }, include:function(scope, config) {
-    var params = config.params;
-    if(!params || params.length !== 1) {
-      S.error("include must has one param");
-      return""
-    }
-    if(config.hash) {
-      var newScope = new Scope(config.hash);
-      newScope.setParent(scope);
-      scope = newScope
-    }
-    var myName = this.config.name;
-    var subTplName = params[0];
-    if(subTplName.charAt(0) === ".") {
-      if(myName === "unspecified") {
-        S.error("parent template does not have name" + " for relative sub tpl name: " + subTplName);
-        return""
-      }
-      subTplName = Path.resolve(myName, "../", subTplName)
-    }
-    var tpl = this.config.loader.call(this, subTplName);
-    config = S.merge(this.config);
-    config.name = subTplName;
-    config.commands = this.config.commands;
-    config.macros = this.config.macros;
-    return this.invokeEngine(tpl, scope, config)
-  }, macro:function(scope, config) {
-    var params = config.params;
-    var macroName = params[0];
-    var params1 = params.slice(1);
-    var macros = this.config.macros;
-    if(config.fn) {
-      if(!macros[macroName]) {
-        macros[macroName] = {paramNames:params1, fn:config.fn}
-      }
-    }else {
-      var paramValues = {};
-      var macro = macros[macroName];
-      if(!macro) {
-        S.error("can not find macro:" + name)
-      }
-      S.each(macro.paramNames, function(p, i) {
-        paramValues[p] = params1[i]
-      });
-      var newScope = new Scope(paramValues);
-      return macro.fn.call(this, newScope)
-    }
-    return""
-  }, parse:function(scope, config) {
-    return commands.include.call(this, new Scope, config)
-  }};
-  return commands
-});
-KISSY.add("xtemplate/runtime", ["./runtime/commands", "./runtime/scope"], function(S, require) {
-  var commands = require("./runtime/commands");
-  var Scope = require("./runtime/scope");
-  var escapeHtml = S.escapeHtml;
-  var logger = S.getLogger("s/xtemplate");
-  function info(s) {
-    logger.info(s)
-  }
-  function findCommand(commands, name) {
-    var parts = name.split(".");
-    var cmd = commands;
-    var len = parts.length;
-    for(var i = 0;i < len;i++) {
-      cmd = cmd[parts[i]];
-      if(!cmd) {
-        break
-      }
-    }
-    return cmd
-  }
-  function runInlineCommand(engine, scope, options, name, line, onlyCommand) {
-    var id0;
-    var config = engine.config;
-    var commands = config.commands;
-    var command1 = findCommand(commands, name);
-    if(command1) {
-      try {
-        id0 = command1.call(engine, scope, options)
-      }catch(e) {
-        S.error(e.message + ': "' + name + '" at line ' + line)
-      }
-      return{find:true, value:id0}
-    }else {
-      if(onlyCommand) {
-        S.error("can not find command: " + name + '" at line ' + line)
-      }
-    }
-    return{find:false}
-  }
-  function getProperty(engine, scope, name, depth, line) {
-    var id0;
-    var config = engine.config;
-    var logFn = config.silent ? info : S.error;
-    var tmp2 = scope.resolve(name, depth);
-    if(tmp2 === false) {
-      logFn('can not find property: "' + name + '" at line ' + line, "warn")
-    }else {
-      id0 = tmp2[0]
-    }
-    return id0
-  }
-  var utils = {runBlockCommand:function(engine, scope, options, name, line) {
-    var config = engine.config;
-    var logFn = config.silent ? info : S.error;
-    var commands = config.commands;
-    var command = findCommand(commands, name);
-    if(!command) {
-      if(!options.params && !options.hash) {
-        var property = scope.resolve(name);
-        if(property === false) {
-          logFn('can not find property: "' + name + '" at line ' + line);
-          property = ""
+        if(isPromise(v)) {
+          promiseWhen(v, fulfilled, rejected)
         }else {
-          property = property[0]
-        }
-        command = commands["if"];
-        if(S.isArray(property)) {
-          command = commands.each
-        }else {
-          if(typeof property === "object") {
-            command = commands["with"]
+          if(fulfilled) {
+            processImmediate(function() {
+              fulfilled.call(promise, v)
+            })
           }
         }
-        options.params = [property]
-      }else {
-        S.error("can not find command: " + name + '" at line ' + line);
-        return""
       }
     }
-    var ret;
-    try {
-      ret = command.call(engine, scope, options)
-    }catch(e) {
-      S.error(e.message + ': "' + name + '" at line ' + line)
-    }
-    return ret
-  }, renderOutput:function(exp, escaped) {
-    if(exp === undefined) {
-      exp = ""
-    }
-    return escaped && exp ? escapeHtml(exp) : exp
-  }, getProperty:function(engine, scope, name, depth, line) {
-    return getProperty(engine, scope, name, depth, line)
-  }, runInlineCommand:function(engine, scope, options, name, line) {
-    var id0 = "", ret;
-    ret = runInlineCommand(engine, scope, options, name, line);
-    if(ret.find) {
-      id0 = ret.value
-    }
-    return id0
-  }, getPropertyOrRunCommand:function(engine, scope, options, name, depth, line) {
-    var id0, ret;
-    var onlyCommand = options.hash || options.params;
-    ret = runInlineCommand(engine, scope, options, name, line, onlyCommand);
-    if(ret.find) {
-      id0 = ret.value
-    }else {
-      if(!onlyCommand) {
-        id0 = getProperty(engine, scope, name, depth, line)
-      }
-    }
-    return id0
-  }}, defaultConfig = {silent:true, name:"unspecified", loader:function(subTplName) {
-    var tpl = S.require(subTplName);
-    if(!tpl) {
-      S.error('template "' + subTplName + '" does not exist, ' + "need to be required or used first!")
-    }
-    return tpl
-  }};
-  function XTemplateRuntime(tpl, config) {
-    var self = this;
-    self.tpl = tpl;
-    config = S.merge(defaultConfig, config);
-    config.commands = S.merge(config.commands, commands);
-    config.utils = utils;
-    config.macros = config.macros || {};
-    this.config = config
   }
-  S.mix(XTemplateRuntime, {commands:commands, utils:utils, addCommand:function(commandName, fn) {
-    commands[commandName] = fn
-  }, removeCommand:function(commandName) {
-    delete commands[commandName]
-  }});
-  XTemplateRuntime.prototype = {constructor:XTemplateRuntime, invokeEngine:function(tpl, scope, config) {
-    return(new this.constructor(tpl, config)).render(scope, true)
-  }, removeCommand:function(commandName) {
-    delete this.config.commands[commandName]
-  }, addCommand:function(commandName, fn) {
-    this.config.commands[commandName] = fn
-  }, render:function(data) {
-    var root = data;
-    if(!(root && root.isScope)) {
-      root = new Scope(data)
+  function Defer(promise) {
+    var self = this;
+    if(!(self instanceof Defer)) {
+      return new Defer(promise)
     }
-    return this.tpl(root, S)
-  }};
-  XTemplateRuntime.Scope = Scope;
-  return XTemplateRuntime
-});
-
-/*
-Copyright 2013, KISSY v1.42
-MIT Licensed
-build time: Dec 5 14:08
-*/
-/*
- Combined processedModules by KISSY Module Compiler: 
-
- xtemplate/compiler/parser
- xtemplate/compiler/ast
- xtemplate/compiler
-*/
-
-KISSY.add("xtemplate/compiler/parser", [], function(_, undefined) {
-  var parser = {}, S = KISSY, GrammarConst = {SHIFT_TYPE:1, REDUCE_TYPE:2, ACCEPT_TYPE:0, TYPE_INDEX:0, PRODUCTION_INDEX:1, TO_INDEX:2};
-  var Lexer = function(cfg) {
-    var self = this;
-    self.rules = [];
-    S.mix(self, cfg);
-    self.resetInput(self.input)
-  };
-  Lexer.prototype = {constructor:function(cfg) {
-    var self = this;
-    self.rules = [];
-    S.mix(self, cfg);
-    self.resetInput(self.input)
-  }, resetInput:function(input) {
-    S.mix(this, {input:input, matched:"", stateStack:[Lexer.STATIC.INITIAL], match:"", text:"", firstLine:1, lineNumber:1, lastLine:1, firstColumn:1, lastColumn:1})
-  }, genShortId:function(field) {
-    var base = 97, max = 122, interval = max - base + 1;
-    field += "__gen";
-    var self = this;
-    if(!(field in self)) {
-      self[field] = -1
-    }
-    var index = self[field] = self[field] + 1;
-    var ret = "";
-    do {
-      ret = String.fromCharCode(base + index % interval) + ret;
-      index = Math.floor(index / interval) - 1
-    }while(index >= 0);
-    return ret
-  }, getCurrentRules:function() {
-    var self = this, currentState = self.stateStack[self.stateStack.length - 1], rules = [];
-    currentState = self.mapState(currentState);
-    S.each(self.rules, function(r) {
-      var state = r.state || r[3];
-      if(!state) {
-        if(currentState === Lexer.STATIC.INITIAL) {
-          rules.push(r)
-        }
-      }else {
-        if(S.inArray(currentState, state)) {
-          rules.push(r)
-        }
-      }
-    });
-    return rules
-  }, pushState:function(state) {
-    this.stateStack.push(state)
-  }, popState:function() {
-    return this.stateStack.pop()
-  }, getStateStack:function() {
-    return this.stateStack
-  }, showDebugInfo:function() {
-    var self = this, DEBUG_CONTEXT_LIMIT = Lexer.STATIC.DEBUG_CONTEXT_LIMIT, matched = self.matched, match = self.match, input = self.input;
-    matched = matched.slice(0, matched.length - match.length);
-    var past = (matched.length > DEBUG_CONTEXT_LIMIT ? "..." : "") + matched.slice(-DEBUG_CONTEXT_LIMIT).replace(/\n/, " "), next = match + input;
-    next = next.slice(0, DEBUG_CONTEXT_LIMIT) + (next.length > DEBUG_CONTEXT_LIMIT ? "..." : "");
-    return past + next + "\n" + (new Array(past.length + 1)).join("-") + "^"
-  }, mapSymbol:function(t) {
-    var self = this, symbolMap = self.symbolMap;
-    if(!symbolMap) {
-      return t
-    }
-    return symbolMap[t] || (symbolMap[t] = self.genShortId("symbol"))
-  }, mapReverseSymbol:function(rs) {
-    var self = this, symbolMap = self.symbolMap, i, reverseSymbolMap = self.reverseSymbolMap;
-    if(!reverseSymbolMap && symbolMap) {
-      reverseSymbolMap = self.reverseSymbolMap = {};
-      for(i in symbolMap) {
-        reverseSymbolMap[symbolMap[i]] = i
-      }
-    }
-    if(reverseSymbolMap) {
-      return reverseSymbolMap[rs]
-    }else {
-      return rs
-    }
-  }, mapState:function(s) {
-    var self = this, stateMap = self.stateMap;
-    if(!stateMap) {
-      return s
-    }
-    return stateMap[s] || (stateMap[s] = self.genShortId("state"))
-  }, lex:function() {
-    var self = this, input = self.input, i, rule, m, ret, lines, rules = self.getCurrentRules();
-    self.match = self.text = "";
-    if(!input) {
-      return self.mapSymbol(Lexer.STATIC.END_TAG)
-    }
-    for(i = 0;i < rules.length;i++) {
-      rule = rules[i];
-      var regexp = rule.regexp || rule[1], token = rule.token || rule[0], action = rule.action || rule[2] || undefined;
-      if(m = input.match(regexp)) {
-        lines = m[0].match(/\n.*/g);
-        if(lines) {
-          self.lineNumber += lines.length
-        }
-        S.mix(self, {firstLine:self.lastLine, lastLine:self.lineNumber + 1, firstColumn:self.lastColumn, lastColumn:lines ? lines[lines.length - 1].length - 1 : self.lastColumn + m[0].length});
-        var match;
-        match = self.match = m[0];
-        self.matches = m;
-        self.text = match;
-        self.matched += match;
-        ret = action && action.call(self);
-        if(ret === undefined) {
-          ret = token
-        }else {
-          ret = self.mapSymbol(ret)
-        }
-        input = input.slice(match.length);
-        self.input = input;
-        if(ret) {
-          return ret
-        }else {
-          return self.lex()
-        }
-      }
-    }
-    S.error("lex error at line " + self.lineNumber + ":\n" + self.showDebugInfo());
-    return undefined
-  }};
-  Lexer.STATIC = {INITIAL:"I", DEBUG_CONTEXT_LIMIT:20, END_TAG:"$EOF"};
-  var lexer = new Lexer({rules:[[0, /^[\s\S]*?(?={{)/, function() {
-    var self = this, text = self.text, m, n = 0;
-    if(m = text.match(/\\+$/)) {
-      n = m[0].length
-    }
-    if(n % 2) {
-      self.pushState("et");
-      text = text.slice(0, -1)
-    }else {
-      self.pushState("t")
-    }
-    text = text.replace(/\\+$/g, function(m) {
-      return(new Array(m.length / 2 + 1)).join("\\")
-    });
-    self.text = text;
-    return"CONTENT"
-  }], ["b", /^[\s\S]+/, 0], ["b", /^[\s\S]{2,}?(?:(?={{)|$)/, function popState() {
-    this.popState()
-  }, ["et"]], ["c", /^{{(?:#|@|\^)/, 0, ["t"]], ["d", /^{{\//, 0, ["t"]], ["e", /^{{\s*else\s*}}/, function popState() {
-    this.popState()
-  }, ["t"]], [0, /^{{![\s\S]*?}}/, function popState() {
-    this.popState()
-  }, ["t"]], ["b", /^{{%([\s\S]*?)%}}/, function() {
-    this.text = this.matches[1] || "";
-    this.popState()
-  }, ["t"]], ["f", /^{{{?/, 0, ["t"]], ["g", /^\s+/, 0, ["t"]], ["h", /^}}}?/, function popState() {
-    this.popState()
-  }, ["t"]], ["i", /^\(/, 0, ["t"]], ["j", /^\)/, 0, ["t"]], ["k", /^\|\|/, 0, ["t"]], ["l", /^&&/, 0, ["t"]], ["m", /^===/, 0, ["t"]], ["n", /^!==/, 0, ["t"]], ["o", /^>=/, 0, ["t"]], ["p", /^<=/, 0, ["t"]], ["q", /^>/, 0, ["t"]], ["r", /^</, 0, ["t"]], ["s", /^\+/, 0, ["t"]], ["t", /^-/, 0, ["t"]], ["u", /^\*/, 0, ["t"]], ["v", /^\//, 0, ["t"]], ["w", /^%/, 0, ["t"]], ["x", /^!/, 0, ["t"]], ["y", /^"(\\[\s\S]|[^\\"])*"/, function() {
-    this.text = this.text.slice(1, -1).replace(/\\"/g, '"')
-  }, ["t"]], ["y", /^'(\\[\s\S]|[^\\'])*'/, function() {
-    this.text = this.text.slice(1, -1).replace(/\\'/g, "'")
-  }, ["t"]], ["z", /^true/, 0, ["t"]], ["z", /^false/, 0, ["t"]], ["aa", /^\d+(?:\.\d+)?(?:e-?\d+)?/i, 0, ["t"]], ["ab", /^=/, 0, ["t"]], ["ac", /^\.(?=})/, 0, ["t"]], ["ac", /^\.\./, function() {
-    this.pushState("ws")
-  }, ["t"]], ["ad", /^\//, function popState() {
-    this.popState()
-  }, ["ws"]], ["ad", /^\./, 0, ["t"]], ["ae", /^\[/, 0, ["t"]], ["af", /^\]/, 0, ["t"]], ["ac", /^[a-zA-Z0-9_$]+/, 0, ["t"]], ["ag", /^./, 0, ["t"]]]});
-  parser.lexer = lexer;
-  lexer.symbolMap = {$EOF:"a", CONTENT:"b", OPEN_BLOCK:"c", OPEN_CLOSE_BLOCK:"d", INVERSE:"e", OPEN_TPL:"f", SPACE:"g", CLOSE:"h", LPAREN:"i", RPAREN:"j", OR:"k", AND:"l", LOGIC_EQUALS:"m", LOGIC_NOT_EQUALS:"n", GE:"o", LE:"p", GT:"q", LT:"r", PLUS:"s", MINUS:"t", MULTIPLY:"u", DIVIDE:"v", MODULUS:"w", NOT:"x", STRING:"y", BOOLEAN:"z", NUMBER:"aa", EQUALS:"ab", ID:"ac", SEP:"ad", REF_START:"ae", REF_END:"af", INVALID:"ag", $START:"ah", program:"ai", statements:"aj", statement:"ak", openBlock:"al", 
-  closeBlock:"am", tpl:"an", inBlockTpl:"ao", path:"ap", inTpl:"aq", Expression:"ar", params:"as", hash:"at", param:"au", ConditionalOrExpression:"av", ConditionalAndExpression:"aw", EqualityExpression:"ax", RelationalExpression:"ay", AdditiveExpression:"az", MultiplicativeExpression:"ba", UnaryExpression:"bb", PrimaryExpression:"bc", hashSegments:"bd", hashSegment:"be", pathSegments:"bf"};
-  parser.productions = [["ah", ["ai"]], ["ai", ["aj", "e", "aj"], function() {
-    return new this.yy.ProgramNode(this.lexer.lineNumber, this.$1, this.$3)
-  }], ["ai", ["aj"], function() {
-    return new this.yy.ProgramNode(this.lexer.lineNumber, this.$1)
-  }], ["aj", ["ak"], function() {
-    return[this.$1]
-  }], ["aj", ["aj", "ak"], function() {
-    this.$1.push(this.$2)
-  }], ["ak", ["al", "ai", "am"], function() {
-    return new this.yy.BlockNode(this.lexer.lineNumber, this.$1, this.$2, this.$3)
-  }], ["ak", ["an"]], ["ak", ["b"], function() {
-    return new this.yy.ContentNode(this.lexer.lineNumber, this.$1)
-  }], ["ao", ["ap"], function() {
-    return new this.yy.TplNode(this.lexer.lineNumber, this.$1)
-  }], ["ao", ["aq"]], ["al", ["c", "ao", "h"], function() {
-    if(this.$1.charAt(this.$1.length - 1) === "^") {
-      this.$2.isInverted = 1
-    }
-    return this.$2
-  }], ["am", ["d", "ap", "h"], function() {
-    return this.$2
-  }], ["an", ["f", "aq", "h"], function() {
-    if(this.$1.length === 3) {
-      this.$2.escaped = false
-    }
-    return this.$2
-  }], ["an", ["f", "ar", "h"], function() {
-    var tpl = new this.yy.TplExpressionNode(this.lexer.lineNumber, this.$2);
-    if(this.$1.length === 3) {
-      tpl.escaped = false
-    }
-    return tpl
-  }], ["aq", ["ap", "g", "as", "g", "at"], function() {
-    return new this.yy.TplNode(this.lexer.lineNumber, this.$1, this.$3, this.$5)
-  }], ["aq", ["ap", "g", "as"], function() {
-    return new this.yy.TplNode(this.lexer.lineNumber, this.$1, this.$3)
-  }], ["aq", ["ap", "g", "at"], function() {
-    return new this.yy.TplNode(this.lexer.lineNumber, this.$1, null, this.$3)
-  }], ["as", ["as", "g", "au"], function() {
-    this.$1.push(this.$3)
-  }], ["as", ["au"], function() {
-    return[this.$1]
-  }], ["au", ["ar"]], ["ar", ["av"]], ["av", ["aw"]], ["av", ["av", "k", "aw"], function() {
-    return new this.yy.ConditionalOrExpression(this.$1, this.$3)
-  }], ["aw", ["ax"]], ["aw", ["aw", "l", "ax"], function() {
-    return new this.yy.ConditionalAndExpression(this.$1, this.$3)
-  }], ["ax", ["ay"]], ["ax", ["ax", "m", "ay"], function() {
-    return new this.yy.EqualityExpression(this.$1, "===", this.$3)
-  }], ["ax", ["ax", "n", "ay"], function() {
-    return new this.yy.EqualityExpression(this.$1, "!==", this.$3)
-  }], ["ay", ["az"]], ["ay", ["ay", "r", "az"], function() {
-    return new this.yy.RelationalExpression(this.$1, "<", this.$3)
-  }], ["ay", ["ay", "q", "az"], function() {
-    return new this.yy.RelationalExpression(this.$1, ">", this.$3)
-  }], ["ay", ["ay", "p", "az"], function() {
-    return new this.yy.RelationalExpression(this.$1, "<=", this.$3)
-  }], ["ay", ["ay", "o", "az"], function() {
-    return new this.yy.RelationalExpression(this.$1, ">=", this.$3)
-  }], ["az", ["ba"]], ["az", ["az", "s", "ba"], function() {
-    return new this.yy.AdditiveExpression(this.$1, "+", this.$3)
-  }], ["az", ["az", "t", "ba"], function() {
-    return new this.yy.AdditiveExpression(this.$1, "-", this.$3)
-  }], ["ba", ["bb"]], ["ba", ["ba", "u", "bb"], function() {
-    return new this.yy.MultiplicativeExpression(this.$1, "*", this.$3)
-  }], ["ba", ["ba", "v", "bb"], function() {
-    return new this.yy.MultiplicativeExpression(this.$1, "/", this.$3)
-  }], ["ba", ["ba", "w", "bb"], function() {
-    return new this.yy.MultiplicativeExpression(this.$1, "%", this.$3)
-  }], ["bb", ["x", "bb"], function() {
-    return new this.yy.UnaryExpression(this.$1, this.$2)
-  }], ["bb", ["t", "bb"], function() {
-    return new this.yy.UnaryExpression(this.$1, this.$2)
-  }], ["bb", ["bc"]], ["bc", ["y"], function() {
-    return new this.yy.StringNode(this.lexer.lineNumber, this.$1)
-  }], ["bc", ["aa"], function() {
-    return new this.yy.NumberNode(this.lexer.lineNumber, this.$1)
-  }], ["bc", ["z"], function() {
-    return new this.yy.BooleanNode(this.lexer.lineNumber, this.$1)
-  }], ["bc", ["ap"]], ["bc", ["i", "ar", "j"], function() {
-    return this.$2
-  }], ["at", ["bd"], function() {
-    return new this.yy.HashNode(this.lexer.lineNumber, this.$1)
-  }], ["bd", ["bd", "g", "be"], function() {
-    this.$1.push(this.$3)
-  }], ["bd", ["be"], function() {
-    return[this.$1]
-  }], ["be", ["ac", "ab", "ar"], function() {
-    return[this.$1, this.$3]
-  }], ["ap", ["bf"], function() {
-    return new this.yy.IdNode(this.lexer.lineNumber, this.$1)
-  }], ["bf", ["bf", "ad", "ac"], function() {
-    this.$1.push(this.$3)
-  }], ["bf", ["bf", "ae", "ar", "af"], function() {
-    this.$1.push(this.$3)
-  }], ["bf", ["bf", "ad", "aa"], function() {
-    this.$1.push(this.$3)
-  }], ["bf", ["ac"], function() {
-    return[this.$1]
-  }]];
-  parser.table = {gotos:{"0":{ai:4, aj:5, ak:6, al:7, an:8}, "2":{ao:10, aq:11, ap:12, bf:13}, "3":{aq:20, ar:21, av:22, aw:23, ax:24, ay:25, az:26, ba:27, bb:28, bc:29, ap:30, bf:13}, "5":{ak:32, al:7, an:8}, "7":{ai:33, aj:5, ak:6, al:7, an:8}, "14":{ar:38, av:22, aw:23, ax:24, ay:25, az:26, ba:27, bb:28, bc:29, ap:39, bf:13}, "15":{bb:40, bc:29, ap:39, bf:13}, "16":{bb:41, bc:29, ap:39, bf:13}, "31":{aj:57, ak:6, al:7, an:8}, "33":{am:59}, "35":{as:61, au:62, ar:63, av:22, aw:23, ax:24, ay:25, 
-  az:26, ba:27, bb:28, bc:29, at:64, bd:65, be:66, ap:39, bf:13}, "37":{ar:69, av:22, aw:23, ax:24, ay:25, az:26, ba:27, bb:28, bc:29, ap:39, bf:13}, "44":{aw:71, ax:24, ay:25, az:26, ba:27, bb:28, bc:29, ap:39, bf:13}, "45":{ax:72, ay:25, az:26, ba:27, bb:28, bc:29, ap:39, bf:13}, "46":{ay:73, az:26, ba:27, bb:28, bc:29, ap:39, bf:13}, "47":{ay:74, az:26, ba:27, bb:28, bc:29, ap:39, bf:13}, "48":{az:75, ba:27, bb:28, bc:29, ap:39, bf:13}, "49":{az:76, ba:27, bb:28, bc:29, ap:39, bf:13}, "50":{az:77, 
-  ba:27, bb:28, bc:29, ap:39, bf:13}, "51":{az:78, ba:27, bb:28, bc:29, ap:39, bf:13}, "52":{ba:79, bb:28, bc:29, ap:39, bf:13}, "53":{ba:80, bb:28, bc:29, ap:39, bf:13}, "54":{bb:81, bc:29, ap:39, bf:13}, "55":{bb:82, bc:29, ap:39, bf:13}, "56":{bb:83, bc:29, ap:39, bf:13}, "57":{ak:32, al:7, an:8}, "58":{ap:84, bf:13}, "85":{ar:90, av:22, aw:23, ax:24, ay:25, az:26, ba:27, bb:28, bc:29, ap:39, bf:13}, "86":{au:91, ar:63, av:22, aw:23, ax:24, ay:25, az:26, ba:27, bb:28, bc:29, at:92, bd:65, be:66, 
-  ap:39, bf:13}, "87":{be:94}}, action:{"0":{b:[1, undefined, 1], c:[1, undefined, 2], f:[1, undefined, 3]}, "1":{a:[2, 7], e:[2, 7], c:[2, 7], f:[2, 7], b:[2, 7], d:[2, 7]}, "2":{ac:[1, undefined, 9]}, "3":{i:[1, undefined, 14], t:[1, undefined, 15], x:[1, undefined, 16], y:[1, undefined, 17], z:[1, undefined, 18], aa:[1, undefined, 19], ac:[1, undefined, 9]}, "4":{a:[0]}, "5":{a:[2, 2], d:[2, 2], b:[1, undefined, 1], c:[1, undefined, 2], e:[1, undefined, 31], f:[1, undefined, 3]}, "6":{a:[2, 3], 
-  e:[2, 3], c:[2, 3], f:[2, 3], b:[2, 3], d:[2, 3]}, "7":{b:[1, undefined, 1], c:[1, undefined, 2], f:[1, undefined, 3]}, "8":{a:[2, 6], e:[2, 6], c:[2, 6], f:[2, 6], b:[2, 6], d:[2, 6]}, "9":{h:[2, 56], g:[2, 56], ad:[2, 56], ae:[2, 56], k:[2, 56], l:[2, 56], m:[2, 56], n:[2, 56], o:[2, 56], p:[2, 56], q:[2, 56], r:[2, 56], s:[2, 56], t:[2, 56], u:[2, 56], v:[2, 56], w:[2, 56], j:[2, 56], af:[2, 56]}, "10":{h:[1, undefined, 34]}, "11":{h:[2, 9]}, "12":{h:[2, 8], g:[1, undefined, 35]}, "13":{h:[2, 
-  52], g:[2, 52], k:[2, 52], l:[2, 52], m:[2, 52], n:[2, 52], o:[2, 52], p:[2, 52], q:[2, 52], r:[2, 52], s:[2, 52], t:[2, 52], u:[2, 52], v:[2, 52], w:[2, 52], j:[2, 52], af:[2, 52], ad:[1, undefined, 36], ae:[1, undefined, 37]}, "14":{i:[1, undefined, 14], t:[1, undefined, 15], x:[1, undefined, 16], y:[1, undefined, 17], z:[1, undefined, 18], aa:[1, undefined, 19], ac:[1, undefined, 9]}, "15":{i:[1, undefined, 14], t:[1, undefined, 15], x:[1, undefined, 16], y:[1, undefined, 17], z:[1, undefined, 
-  18], aa:[1, undefined, 19], ac:[1, undefined, 9]}, "16":{i:[1, undefined, 14], t:[1, undefined, 15], x:[1, undefined, 16], y:[1, undefined, 17], z:[1, undefined, 18], aa:[1, undefined, 19], ac:[1, undefined, 9]}, "17":{h:[2, 43], k:[2, 43], l:[2, 43], m:[2, 43], n:[2, 43], o:[2, 43], p:[2, 43], q:[2, 43], r:[2, 43], s:[2, 43], t:[2, 43], u:[2, 43], v:[2, 43], w:[2, 43], j:[2, 43], g:[2, 43], af:[2, 43]}, "18":{h:[2, 45], k:[2, 45], l:[2, 45], m:[2, 45], n:[2, 45], o:[2, 45], p:[2, 45], q:[2, 45], 
-  r:[2, 45], s:[2, 45], t:[2, 45], u:[2, 45], v:[2, 45], w:[2, 45], j:[2, 45], g:[2, 45], af:[2, 45]}, "19":{h:[2, 44], k:[2, 44], l:[2, 44], m:[2, 44], n:[2, 44], o:[2, 44], p:[2, 44], q:[2, 44], r:[2, 44], s:[2, 44], t:[2, 44], u:[2, 44], v:[2, 44], w:[2, 44], j:[2, 44], g:[2, 44], af:[2, 44]}, "20":{h:[1, undefined, 42]}, "21":{h:[1, undefined, 43]}, "22":{h:[2, 20], j:[2, 20], g:[2, 20], af:[2, 20], k:[1, undefined, 44]}, "23":{h:[2, 21], k:[2, 21], j:[2, 21], g:[2, 21], af:[2, 21], l:[1, undefined, 
-  45]}, "24":{h:[2, 23], k:[2, 23], l:[2, 23], j:[2, 23], g:[2, 23], af:[2, 23], m:[1, undefined, 46], n:[1, undefined, 47]}, "25":{h:[2, 25], k:[2, 25], l:[2, 25], m:[2, 25], n:[2, 25], j:[2, 25], g:[2, 25], af:[2, 25], o:[1, undefined, 48], p:[1, undefined, 49], q:[1, undefined, 50], r:[1, undefined, 51]}, "26":{h:[2, 28], k:[2, 28], l:[2, 28], m:[2, 28], n:[2, 28], o:[2, 28], p:[2, 28], q:[2, 28], r:[2, 28], j:[2, 28], g:[2, 28], af:[2, 28], s:[1, undefined, 52], t:[1, undefined, 53]}, "27":{h:[2, 
-  33], k:[2, 33], l:[2, 33], m:[2, 33], n:[2, 33], o:[2, 33], p:[2, 33], q:[2, 33], r:[2, 33], s:[2, 33], t:[2, 33], j:[2, 33], g:[2, 33], af:[2, 33], u:[1, undefined, 54], v:[1, undefined, 55], w:[1, undefined, 56]}, "28":{h:[2, 36], k:[2, 36], l:[2, 36], m:[2, 36], n:[2, 36], o:[2, 36], p:[2, 36], q:[2, 36], r:[2, 36], s:[2, 36], t:[2, 36], u:[2, 36], v:[2, 36], w:[2, 36], j:[2, 36], g:[2, 36], af:[2, 36]}, "29":{h:[2, 42], k:[2, 42], l:[2, 42], m:[2, 42], n:[2, 42], o:[2, 42], p:[2, 42], q:[2, 
-  42], r:[2, 42], s:[2, 42], t:[2, 42], u:[2, 42], v:[2, 42], w:[2, 42], j:[2, 42], g:[2, 42], af:[2, 42]}, "30":{h:[2, 46], k:[2, 46], l:[2, 46], m:[2, 46], n:[2, 46], o:[2, 46], p:[2, 46], q:[2, 46], r:[2, 46], s:[2, 46], t:[2, 46], u:[2, 46], v:[2, 46], w:[2, 46], g:[1, undefined, 35]}, "31":{b:[1, undefined, 1], c:[1, undefined, 2], f:[1, undefined, 3]}, "32":{a:[2, 4], e:[2, 4], c:[2, 4], f:[2, 4], b:[2, 4], d:[2, 4]}, "33":{d:[1, undefined, 58]}, "34":{c:[2, 10], f:[2, 10], b:[2, 10]}, "35":{i:[1, 
-  undefined, 14], t:[1, undefined, 15], x:[1, undefined, 16], y:[1, undefined, 17], z:[1, undefined, 18], aa:[1, undefined, 19], ac:[1, undefined, 60]}, "36":{aa:[1, undefined, 67], ac:[1, undefined, 68]}, "37":{i:[1, undefined, 14], t:[1, undefined, 15], x:[1, undefined, 16], y:[1, undefined, 17], z:[1, undefined, 18], aa:[1, undefined, 19], ac:[1, undefined, 9]}, "38":{j:[1, undefined, 70]}, "39":{j:[2, 46], k:[2, 46], l:[2, 46], m:[2, 46], n:[2, 46], o:[2, 46], p:[2, 46], q:[2, 46], r:[2, 46], 
-  s:[2, 46], t:[2, 46], u:[2, 46], v:[2, 46], w:[2, 46], h:[2, 46], g:[2, 46], af:[2, 46]}, "40":{h:[2, 41], k:[2, 41], l:[2, 41], m:[2, 41], n:[2, 41], o:[2, 41], p:[2, 41], q:[2, 41], r:[2, 41], s:[2, 41], t:[2, 41], u:[2, 41], v:[2, 41], w:[2, 41], j:[2, 41], g:[2, 41], af:[2, 41]}, "41":{h:[2, 40], k:[2, 40], l:[2, 40], m:[2, 40], n:[2, 40], o:[2, 40], p:[2, 40], q:[2, 40], r:[2, 40], s:[2, 40], t:[2, 40], u:[2, 40], v:[2, 40], w:[2, 40], j:[2, 40], g:[2, 40], af:[2, 40]}, "42":{a:[2, 12], e:[2, 
-  12], c:[2, 12], f:[2, 12], b:[2, 12], d:[2, 12]}, "43":{a:[2, 13], e:[2, 13], c:[2, 13], f:[2, 13], b:[2, 13], d:[2, 13]}, "44":{i:[1, undefined, 14], t:[1, undefined, 15], x:[1, undefined, 16], y:[1, undefined, 17], z:[1, undefined, 18], aa:[1, undefined, 19], ac:[1, undefined, 9]}, "45":{i:[1, undefined, 14], t:[1, undefined, 15], x:[1, undefined, 16], y:[1, undefined, 17], z:[1, undefined, 18], aa:[1, undefined, 19], ac:[1, undefined, 9]}, "46":{i:[1, undefined, 14], t:[1, undefined, 15], x:[1, 
-  undefined, 16], y:[1, undefined, 17], z:[1, undefined, 18], aa:[1, undefined, 19], ac:[1, undefined, 9]}, "47":{i:[1, undefined, 14], t:[1, undefined, 15], x:[1, undefined, 16], y:[1, undefined, 17], z:[1, undefined, 18], aa:[1, undefined, 19], ac:[1, undefined, 9]}, "48":{i:[1, undefined, 14], t:[1, undefined, 15], x:[1, undefined, 16], y:[1, undefined, 17], z:[1, undefined, 18], aa:[1, undefined, 19], ac:[1, undefined, 9]}, "49":{i:[1, undefined, 14], t:[1, undefined, 15], x:[1, undefined, 16], 
-  y:[1, undefined, 17], z:[1, undefined, 18], aa:[1, undefined, 19], ac:[1, undefined, 9]}, "50":{i:[1, undefined, 14], t:[1, undefined, 15], x:[1, undefined, 16], y:[1, undefined, 17], z:[1, undefined, 18], aa:[1, undefined, 19], ac:[1, undefined, 9]}, "51":{i:[1, undefined, 14], t:[1, undefined, 15], x:[1, undefined, 16], y:[1, undefined, 17], z:[1, undefined, 18], aa:[1, undefined, 19], ac:[1, undefined, 9]}, "52":{i:[1, undefined, 14], t:[1, undefined, 15], x:[1, undefined, 16], y:[1, undefined, 
-  17], z:[1, undefined, 18], aa:[1, undefined, 19], ac:[1, undefined, 9]}, "53":{i:[1, undefined, 14], t:[1, undefined, 15], x:[1, undefined, 16], y:[1, undefined, 17], z:[1, undefined, 18], aa:[1, undefined, 19], ac:[1, undefined, 9]}, "54":{i:[1, undefined, 14], t:[1, undefined, 15], x:[1, undefined, 16], y:[1, undefined, 17], z:[1, undefined, 18], aa:[1, undefined, 19], ac:[1, undefined, 9]}, "55":{i:[1, undefined, 14], t:[1, undefined, 15], x:[1, undefined, 16], y:[1, undefined, 17], z:[1, undefined, 
-  18], aa:[1, undefined, 19], ac:[1, undefined, 9]}, "56":{i:[1, undefined, 14], t:[1, undefined, 15], x:[1, undefined, 16], y:[1, undefined, 17], z:[1, undefined, 18], aa:[1, undefined, 19], ac:[1, undefined, 9]}, "57":{a:[2, 1], d:[2, 1], b:[1, undefined, 1], c:[1, undefined, 2], f:[1, undefined, 3]}, "58":{ac:[1, undefined, 9]}, "59":{a:[2, 5], e:[2, 5], c:[2, 5], f:[2, 5], b:[2, 5], d:[2, 5]}, "60":{h:[2, 56], g:[2, 56], k:[2, 56], l:[2, 56], m:[2, 56], n:[2, 56], o:[2, 56], p:[2, 56], q:[2, 
-  56], r:[2, 56], s:[2, 56], t:[2, 56], u:[2, 56], v:[2, 56], w:[2, 56], ad:[2, 56], ae:[2, 56], ab:[1, undefined, 85]}, "61":{h:[2, 15], g:[1, undefined, 86]}, "62":{h:[2, 18], g:[2, 18]}, "63":{h:[2, 19], g:[2, 19]}, "64":{h:[2, 16]}, "65":{h:[2, 48], g:[1, undefined, 87]}, "66":{h:[2, 50], g:[2, 50]}, "67":{h:[2, 55], g:[2, 55], ad:[2, 55], ae:[2, 55], k:[2, 55], l:[2, 55], m:[2, 55], n:[2, 55], o:[2, 55], p:[2, 55], q:[2, 55], r:[2, 55], s:[2, 55], t:[2, 55], u:[2, 55], v:[2, 55], w:[2, 55], 
-  j:[2, 55], af:[2, 55]}, "68":{h:[2, 53], g:[2, 53], ad:[2, 53], ae:[2, 53], k:[2, 53], l:[2, 53], m:[2, 53], n:[2, 53], o:[2, 53], p:[2, 53], q:[2, 53], r:[2, 53], s:[2, 53], t:[2, 53], u:[2, 53], v:[2, 53], w:[2, 53], j:[2, 53], af:[2, 53]}, "69":{af:[1, undefined, 88]}, "70":{h:[2, 47], k:[2, 47], l:[2, 47], m:[2, 47], n:[2, 47], o:[2, 47], p:[2, 47], q:[2, 47], r:[2, 47], s:[2, 47], t:[2, 47], u:[2, 47], v:[2, 47], w:[2, 47], j:[2, 47], g:[2, 47], af:[2, 47]}, "71":{h:[2, 22], k:[2, 22], j:[2, 
-  22], g:[2, 22], af:[2, 22], l:[1, undefined, 45]}, "72":{h:[2, 24], k:[2, 24], l:[2, 24], j:[2, 24], g:[2, 24], af:[2, 24], m:[1, undefined, 46], n:[1, undefined, 47]}, "73":{h:[2, 26], k:[2, 26], l:[2, 26], m:[2, 26], n:[2, 26], j:[2, 26], g:[2, 26], af:[2, 26], o:[1, undefined, 48], p:[1, undefined, 49], q:[1, undefined, 50], r:[1, undefined, 51]}, "74":{h:[2, 27], k:[2, 27], l:[2, 27], m:[2, 27], n:[2, 27], j:[2, 27], g:[2, 27], af:[2, 27], o:[1, undefined, 48], p:[1, undefined, 49], q:[1, undefined, 
-  50], r:[1, undefined, 51]}, "75":{h:[2, 32], k:[2, 32], l:[2, 32], m:[2, 32], n:[2, 32], o:[2, 32], p:[2, 32], q:[2, 32], r:[2, 32], j:[2, 32], g:[2, 32], af:[2, 32], s:[1, undefined, 52], t:[1, undefined, 53]}, "76":{h:[2, 31], k:[2, 31], l:[2, 31], m:[2, 31], n:[2, 31], o:[2, 31], p:[2, 31], q:[2, 31], r:[2, 31], j:[2, 31], g:[2, 31], af:[2, 31], s:[1, undefined, 52], t:[1, undefined, 53]}, "77":{h:[2, 30], k:[2, 30], l:[2, 30], m:[2, 30], n:[2, 30], o:[2, 30], p:[2, 30], q:[2, 30], r:[2, 30], 
-  j:[2, 30], g:[2, 30], af:[2, 30], s:[1, undefined, 52], t:[1, undefined, 53]}, "78":{h:[2, 29], k:[2, 29], l:[2, 29], m:[2, 29], n:[2, 29], o:[2, 29], p:[2, 29], q:[2, 29], r:[2, 29], j:[2, 29], g:[2, 29], af:[2, 29], s:[1, undefined, 52], t:[1, undefined, 53]}, "79":{h:[2, 34], k:[2, 34], l:[2, 34], m:[2, 34], n:[2, 34], o:[2, 34], p:[2, 34], q:[2, 34], r:[2, 34], s:[2, 34], t:[2, 34], j:[2, 34], g:[2, 34], af:[2, 34], u:[1, undefined, 54], v:[1, undefined, 55], w:[1, undefined, 56]}, "80":{h:[2, 
-  35], k:[2, 35], l:[2, 35], m:[2, 35], n:[2, 35], o:[2, 35], p:[2, 35], q:[2, 35], r:[2, 35], s:[2, 35], t:[2, 35], j:[2, 35], g:[2, 35], af:[2, 35], u:[1, undefined, 54], v:[1, undefined, 55], w:[1, undefined, 56]}, "81":{h:[2, 37], k:[2, 37], l:[2, 37], m:[2, 37], n:[2, 37], o:[2, 37], p:[2, 37], q:[2, 37], r:[2, 37], s:[2, 37], t:[2, 37], u:[2, 37], v:[2, 37], w:[2, 37], j:[2, 37], g:[2, 37], af:[2, 37]}, "82":{h:[2, 38], k:[2, 38], l:[2, 38], m:[2, 38], n:[2, 38], o:[2, 38], p:[2, 38], q:[2, 
-  38], r:[2, 38], s:[2, 38], t:[2, 38], u:[2, 38], v:[2, 38], w:[2, 38], j:[2, 38], g:[2, 38], af:[2, 38]}, "83":{h:[2, 39], k:[2, 39], l:[2, 39], m:[2, 39], n:[2, 39], o:[2, 39], p:[2, 39], q:[2, 39], r:[2, 39], s:[2, 39], t:[2, 39], u:[2, 39], v:[2, 39], w:[2, 39], j:[2, 39], g:[2, 39], af:[2, 39]}, "84":{h:[1, undefined, 89]}, "85":{i:[1, undefined, 14], t:[1, undefined, 15], x:[1, undefined, 16], y:[1, undefined, 17], z:[1, undefined, 18], aa:[1, undefined, 19], ac:[1, undefined, 9]}, "86":{i:[1, 
-  undefined, 14], t:[1, undefined, 15], x:[1, undefined, 16], y:[1, undefined, 17], z:[1, undefined, 18], aa:[1, undefined, 19], ac:[1, undefined, 60]}, "87":{ac:[1, undefined, 93]}, "88":{h:[2, 54], g:[2, 54], ad:[2, 54], ae:[2, 54], k:[2, 54], l:[2, 54], m:[2, 54], n:[2, 54], o:[2, 54], p:[2, 54], q:[2, 54], r:[2, 54], s:[2, 54], t:[2, 54], u:[2, 54], v:[2, 54], w:[2, 54], j:[2, 54], af:[2, 54]}, "89":{a:[2, 11], e:[2, 11], c:[2, 11], f:[2, 11], b:[2, 11], d:[2, 11]}, "90":{h:[2, 51], g:[2, 51]}, 
-  "91":{h:[2, 17], g:[2, 17]}, "92":{h:[2, 14]}, "93":{ab:[1, undefined, 85]}, "94":{h:[2, 49], g:[2, 49]}}};
-  parser.parse = function parse(input) {
-    var self = this, lexer = self.lexer, state, symbol, action, table = self.table, gotos = table.gotos, tableAction = table.action, productions = self.productions, valueStack = [null], stack = [0];
-    lexer.resetInput(input);
-    while(1) {
-      state = stack[stack.length - 1];
-      if(!symbol) {
-        symbol = lexer.lex()
-      }
-      if(!symbol) {
-        S.log("it is not a valid input: " + input, "error");
-        return false
-      }
-      action = tableAction[state] && tableAction[state][symbol];
-      if(!action) {
-        var expected = [], error;
-        if(tableAction[state]) {
-          for(var symbolForState in tableAction[state]) {
-            expected.push(self.lexer.mapReverseSymbol(symbolForState))
-          }
-        }
-        error = "Syntax error at line " + lexer.lineNumber + ":\n" + lexer.showDebugInfo() + "\n" + "expect " + expected.join(", ");
-        S.error(error);
-        return false
-      }
-      switch(action[GrammarConst.TYPE_INDEX]) {
-        case GrammarConst.SHIFT_TYPE:
-          stack.push(symbol);
-          valueStack.push(lexer.text);
-          stack.push(action[GrammarConst.TO_INDEX]);
-          symbol = null;
-          break;
-        case GrammarConst.REDUCE_TYPE:
-          var production = productions[action[GrammarConst.PRODUCTION_INDEX]], reducedSymbol = production.symbol || production[0], reducedAction = production.action || production[2], reducedRhs = production.rhs || production[1], len = reducedRhs.length, i = 0, ret, $$ = valueStack[valueStack.length - len];
-          ret = undefined;
-          self.$$ = $$;
-          for(;i < len;i++) {
-            self["$" + (len - i)] = valueStack[valueStack.length - 1 - i]
-          }
-          if(reducedAction) {
-            ret = reducedAction.call(self)
-          }
-          if(ret !== undefined) {
-            $$ = ret
-          }else {
-            $$ = self.$$
-          }
-          if(len) {
-            stack = stack.slice(0, -1 * len * 2);
-            valueStack = valueStack.slice(0, -1 * len)
-          }
-          stack.push(reducedSymbol);
-          valueStack.push($$);
-          var newState = gotos[stack[stack.length - 2]][stack[stack.length - 1]];
-          stack.push(newState);
-          break;
-        case GrammarConst.ACCEPT_TYPE:
-          return $$
-      }
-    }
-    return undefined
-  };
-  return parser
-});
-KISSY.add("xtemplate/compiler/ast", [], function(S) {
-  var ast = {};
-  ast.ProgramNode = function(lineNumber, statements, inverse) {
-    var self = this;
-    self.lineNumber = lineNumber;
-    self.statements = statements;
-    self.inverse = inverse
-  };
-  ast.ProgramNode.prototype.type = "program";
-  ast.BlockNode = function(lineNumber, tpl, program, close) {
-    var closeParts = close.parts, self = this, e;
-    if(!S.equals(tpl.path.parts, closeParts)) {
-      e = "Syntax error at line " + lineNumber + ":\n" + "expect {{/" + tpl.path.parts + "}} not {{/" + closeParts + "}}";
-      S.error(e)
-    }
-    self.lineNumber = lineNumber;
-    self.tpl = tpl;
-    self.program = program
-  };
-  ast.BlockNode.prototype.type = "block";
-  ast.TplNode = function(lineNumber, path, params, hash) {
-    var self = this;
-    self.lineNumber = lineNumber;
-    self.path = path;
-    self.params = params;
-    self.hash = hash;
-    self.escaped = true;
-    self.isInverted = false
-  };
-  ast.TplNode.prototype.type = "tpl";
-  ast.TplExpressionNode = function(lineNumber, expression) {
-    var self = this;
-    self.lineNumber = lineNumber;
-    self.expression = expression;
-    self.escaped = true
-  };
-  ast.TplExpressionNode.prototype.type = "tplExpression";
-  ast.ContentNode = function(lineNumber, value) {
-    var self = this;
-    self.lineNumber = lineNumber;
-    self.value = value
-  };
-  ast.ContentNode.prototype.type = "content";
-  ast.UnaryExpression = function(unaryType, v) {
-    this.value = v;
-    this.unaryType = unaryType
-  };
-  ast.UnaryExpression.prototype.type = "unaryExpression";
-  ast.MultiplicativeExpression = function(op1, opType, op2) {
-    var self = this;
-    self.op1 = op1;
-    self.opType = opType;
-    self.op2 = op2
-  };
-  ast.MultiplicativeExpression.prototype.type = "multiplicativeExpression";
-  ast.AdditiveExpression = function(op1, opType, op2) {
-    var self = this;
-    self.op1 = op1;
-    self.opType = opType;
-    self.op2 = op2
-  };
-  ast.AdditiveExpression.prototype.type = "additiveExpression";
-  ast.RelationalExpression = function(op1, opType, op2) {
-    var self = this;
-    self.op1 = op1;
-    self.opType = opType;
-    self.op2 = op2
-  };
-  ast.RelationalExpression.prototype.type = "relationalExpression";
-  ast.EqualityExpression = function(op1, opType, op2) {
-    var self = this;
-    self.op1 = op1;
-    self.opType = opType;
-    self.op2 = op2
-  };
-  ast.EqualityExpression.prototype.type = "equalityExpression";
-  ast.ConditionalAndExpression = function(op1, op2) {
-    var self = this;
-    self.op1 = op1;
-    self.op2 = op2
-  };
-  ast.ConditionalAndExpression.prototype.type = "conditionalAndExpression";
-  ast.ConditionalOrExpression = function(op1, op2) {
-    var self = this;
-    self.op1 = op1;
-    self.op2 = op2
-  };
-  ast.ConditionalOrExpression.prototype.type = "conditionalOrExpression";
-  ast.StringNode = function(lineNumber, value) {
-    var self = this;
-    self.lineNumber = lineNumber;
-    self.value = value
-  };
-  ast.StringNode.prototype.type = "string";
-  ast.NumberNode = function(lineNumber, value) {
-    var self = this;
-    self.lineNumber = lineNumber;
-    self.value = value
-  };
-  ast.NumberNode.prototype.type = "number";
-  ast.BooleanNode = function(lineNumber, value) {
-    var self = this;
-    self.lineNumber = lineNumber;
-    self.value = value
-  };
-  ast.BooleanNode.prototype.type = "boolean";
-  ast.HashNode = function(lineNumber, raw) {
-    var self = this, value = {};
-    self.lineNumber = lineNumber;
-    S.each(raw, function(r) {
-      value[r[0]] = r[1]
-    });
-    self.value = value
-  };
-  ast.HashNode.prototype.type = "hash";
-  ast.IdNode = function(lineNumber, raw) {
-    var self = this, parts = [], depth = 0;
-    self.lineNumber = lineNumber;
-    S.each(raw, function(p) {
-      if(p === "..") {
-        depth++
-      }else {
-        parts.push(p)
-      }
-    });
-    self.parts = parts;
-    self.string = parts.join(".");
-    self.depth = depth
-  };
-  ast.IdNode.prototype.type = "id";
-  return ast
-});
-KISSY.add("xtemplate/compiler", ["xtemplate/runtime", "./compiler/parser", "./compiler/ast"], function(S, require) {
-  var XTemplateRuntime = require("xtemplate/runtime");
-  var parser = require("./compiler/parser");
-  parser.yy = require("./compiler/ast");
-  var doubleReg = /\\*"/g, singleReg = /\\*'/g, arrayPush = [].push, variableId = 0, xtemplateId = 0;
-  function guid(str) {
-    return str + variableId++
+    self.promise = promise || new Promise;
+    self.promise.defer = self
   }
-  function escapeString(str, isCode) {
-    if(isCode) {
-      str = escapeSingleQuoteInCodeString(str, false)
-    }else {
-      str = str.replace(/\\/g, "\\\\").replace(/'/g, "\\'")
+  Defer.prototype = {constructor:Defer, resolve:function(value) {
+    var promise = this.promise, pendings;
+    if(!(pendings = promise[PROMISE_PENDINGS])) {
+      return null
     }
-    str = str.replace(/\r/g, "\\r").replace(/\n/g, "\\n").replace(/\t/g, "\\t");
-    return str
-  }
-  function escapeSingleQuoteInCodeString(str, isDouble) {
-    return str.replace(isDouble ? doubleReg : singleReg, function(m) {
-      if(m.length % 2) {
-        m = "\\" + m
-      }
-      return m
+    promise[PROMISE_VALUE] = value;
+    pendings = [].concat(pendings);
+    promise[PROMISE_PENDINGS] = undefined;
+    promise[PROMISE_PROGRESS_LISTENERS] = undefined;
+    S.each(pendings, function(p) {
+      promiseWhen(promise, p[0], p[1])
+    });
+    return value
+  }, reject:function(reason) {
+    return this.resolve(new Reject(reason))
+  }, notify:function(message) {
+    S.each(this.promise[PROMISE_PROGRESS_LISTENERS], function(listener) {
+      processImmediate(function() {
+        listener(message)
+      })
     })
-  }
-  function pushToArray(to, from) {
-    arrayPush.apply(to, from)
-  }
-  function lastOfArray(arr) {
-    return arr[arr.length - 1]
-  }
-  var gen = {genFunction:function(statements, global) {
-    var source = [];
-    if(!global) {
-      source.push("function(scope) {")
-    }
-    source.push('var buffer = ""' + (global ? "," : ";"));
-    if(global) {
-      source.push("config = this.config," + "engine = this," + "moduleWrap, " + "utils = config.utils;");
-      source.push('if (typeof module !== "undefined" && module.kissy) {' + "moduleWrap = module;" + "}");
-      var natives = "", c, utils = XTemplateRuntime.utils;
-      for(c in utils) {
-        natives += c + "Util = utils." + c + ","
-      }
-      if(natives) {
-        source.push("var " + natives.slice(0, natives.length - 1) + ";")
-      }
-    }
-    if(statements) {
-      for(var i = 0, len = statements.length;i < len;i++) {
-        pushToArray(source, this[statements[i].type](statements[i]))
-      }
-    }
-    source.push("return buffer;");
-    if(!global) {
-      source.push("}");
-      return source
-    }else {
-      return{params:["scope", "S", "undefined"], source:source}
-    }
-  }, genIdOrInlineCommand:function(idNode, tplNode) {
-    var source = [], depth = idNode.depth, configName, idParts = idNode.parts, idName = guid("id"), self = this;
-    if(depth === 0) {
-      var configNameCode = tplNode && self.genConfig(tplNode);
-      if(configNameCode) {
-        configName = configNameCode[0];
-        pushToArray(source, configNameCode[1])
-      }
-    }
-    var idString = self.getIdStringFromIdParts(source, idParts);
-    if(depth || S.startsWith(idString, "this.")) {
-      source.push("var " + idName + " = getPropertyUtil(engine,scope" + ',"' + idString + '",' + depth + "," + idNode.lineNumber + ");")
-    }else {
-      if(configName) {
-        if(idString === "include") {
-          source.push("if(moduleWrap) {re" + 'quire("' + tplNode.params[0].value + '");' + configName + ".params[0] = moduleWrap.resolveByName(" + configName + ".params[0]);" + "}")
-        }
-        source.push("var " + idName + " = runInlineCommandUtil(engine,scope," + configName + ',"' + idString + '",' + idNode.lineNumber + ");")
-      }else {
-        source.push("var " + idName + " = getPropertyOrRunCommandUtil(engine,scope," + (configName || "{}") + ',"' + idString + '",' + depth + "," + idNode.lineNumber + ");")
-      }
-    }
-    return[idName, source]
-  }, genOpExpression:function(e, type) {
-    var source = [], name1, name2, code1 = this[e.op1.type](e.op1), code2 = this[e.op2.type](e.op2);
-    name1 = code1[0];
-    name2 = code2[0];
-    if(name1 && name2) {
-      pushToArray(source, code1[1]);
-      pushToArray(source, code2[1]);
-      source.push(name1 + type + name2);
-      return["", source]
-    }
-    if(!name1 && !name2) {
-      pushToArray(source, code1[1].slice(0, -1));
-      pushToArray(source, code2[1].slice(0, -1));
-      source.push("(" + lastOfArray(code1[1]) + ")" + type + "(" + lastOfArray(code2[1]) + ")");
-      return["", source]
-    }
-    if(name1 && !name2) {
-      pushToArray(source, code1[1]);
-      pushToArray(source, code2[1].slice(0, -1));
-      source.push(name1 + type + "(" + lastOfArray(code2[1]) + ")");
-      return["", source]
-    }
-    if(!name1 && name2) {
-      pushToArray(source, code1[1].slice(0, -1));
-      pushToArray(source, code2[1]);
-      source.push("(" + lastOfArray(code1[1]) + ")" + type + name2);
-      return["", source]
-    }
-    return undefined
-  }, genConfig:function(tplNode) {
-    var source = [], configName, params, hash, self = this;
-    if(tplNode) {
-      params = tplNode.params;
-      hash = tplNode.hash;
-      if(params || hash) {
-        configName = guid("config");
-        source.push("var " + configName + " = {};")
-      }
-      if(params) {
-        var paramsName = guid("params");
-        source.push("var " + paramsName + " = [];");
-        S.each(params, function(param) {
-          var nextIdNameCode = self[param.type](param);
-          if(nextIdNameCode[0]) {
-            pushToArray(source, nextIdNameCode[1]);
-            source.push(paramsName + ".push(" + nextIdNameCode[0] + ");")
-          }else {
-            pushToArray(source, nextIdNameCode[1].slice(0, -1));
-            source.push(paramsName + ".push(" + lastOfArray(nextIdNameCode[1]) + ");")
-          }
-        });
-        source.push(configName + ".params=" + paramsName + ";")
-      }
-      if(hash) {
-        var hashName = guid("hash");
-        source.push("var " + hashName + " = {};");
-        S.each(hash.value, function(v, key) {
-          var nextIdNameCode = self[v.type](v);
-          if(nextIdNameCode[0]) {
-            pushToArray(source, nextIdNameCode[1]);
-            source.push(hashName + '["' + key + '"] = ' + nextIdNameCode[0] + ";")
-          }else {
-            pushToArray(source, nextIdNameCode[1].slice(0, -1));
-            source.push(hashName + '["' + key + '"] = ' + lastOfArray(nextIdNameCode[1]) + ";")
-          }
-        });
-        source.push(configName + ".hash=" + hashName + ";")
-      }
-    }
-    return[configName, source]
-  }, conditionalOrExpression:function(e) {
-    return this.genOpExpression(e, "||")
-  }, conditionalAndExpression:function(e) {
-    return this.genOpExpression(e, "&&")
-  }, relationalExpression:function(e) {
-    return this.genOpExpression(e, e.opType)
-  }, equalityExpression:function(e) {
-    return this.genOpExpression(e, e.opType)
-  }, additiveExpression:function(e) {
-    return this.genOpExpression(e, e.opType)
-  }, multiplicativeExpression:function(e) {
-    return this.genOpExpression(e, e.opType)
-  }, unaryExpression:function(e) {
-    var source = [], name, unaryType = e.unaryType, code = this[e.value.type](e.value);
-    arrayPush.apply(source, code[1]);
-    if(name = code[0]) {
-      source.push(name + "=" + unaryType + name + ";")
-    }else {
-      source[source.length - 1] = "" + unaryType + lastOfArray(source)
-    }
-    return[name, source]
-  }, string:function(e) {
-    return["", ["'" + escapeString(e.value, true) + "'"]]
-  }, number:function(e) {
-    return["", [e.value]]
-  }, "boolean":function(e) {
-    return["", [e.value]]
-  }, id:function(idNode) {
-    var source = [], depth = idNode.depth, idParts = idNode.parts, idName = guid("id"), self = this;
-    var idString = self.getIdStringFromIdParts(source, idParts);
-    source.push("var " + idName + " = getPropertyUtil(engine,scope" + ',"' + idString + '",' + depth + "," + idNode.lineNumber + ");");
-    return[idName, source]
-  }, block:function(block) {
-    var programNode = block.program, source = [], self = this, tplNode = block.tpl, configNameCode = self.genConfig(tplNode), configName = configNameCode[0], tplPath = tplNode.path, pathString = tplPath.string, inverseFn;
-    pushToArray(source, configNameCode[1]);
-    if(!configName) {
-      configName = S.guid("config");
-      source.push("var " + configName + " = {};")
-    }
-    source.push(configName + ".fn=" + self.genFunction(programNode.statements).join("\n") + ";");
-    if(programNode.inverse) {
-      inverseFn = self.genFunction(programNode.inverse).join("\n");
-      source.push(configName + ".inverse=" + inverseFn + ";")
-    }
-    if(tplNode.isInverted) {
-      var tmp = guid("inverse");
-      source.push("var " + tmp + "=" + configName + ".fn;");
-      source.push(configName + ".fn = " + configName + ".inverse;");
-      source.push(configName + ".inverse = " + tmp + ";")
-    }
-    if(!tplNode.hash && !tplNode.params) {
-      var parts = tplPath.parts;
-      for(var i = 0;i < parts.length;i++) {
-        if(typeof parts[i] !== "string") {
-          pathString = self.getIdStringFromIdParts(source, parts);
-          break
-        }
-      }
-    }
-    source.push("buffer += runBlockCommandUtil(engine, scope, " + configName + ", " + '"' + pathString + '", ' + tplPath.lineNumber + ");");
-    return source
-  }, content:function(contentNode) {
-    return["buffer += '" + escapeString(contentNode.value, false) + "';"]
-  }, tpl:function(tplNode) {
-    var source = [], genIdOrInlineCommandCode = this.genIdOrInlineCommand(tplNode.path, tplNode);
-    pushToArray(source, genIdOrInlineCommandCode[1]);
-    source.push("buffer += renderOutputUtil(" + genIdOrInlineCommandCode[0] + "," + tplNode.escaped + ");");
-    return source
-  }, tplExpression:function(e) {
-    var source = [], escaped = e.escaped, code, expression = e.expression, type = e.expression.type, expressionOrVariable;
-    if(type === "id") {
-      code = this.genIdOrInlineCommand(expression)
-    }else {
-      code = this[type](expression)
-    }
-    if(code[0]) {
-      pushToArray(source, code[1]);
-      expressionOrVariable = code[0]
-    }else {
-      pushToArray(source, code[1].slice(0, -1));
-      expressionOrVariable = lastOfArray(code[1])
-    }
-    source.push("buffer += renderOutputUtil(" + expressionOrVariable + "," + escaped + ");");
-    return source
-  }, getIdStringFromIdParts:function(source, idParts) {
-    var idString = "", self = this, i, idPart, idPartType, nextIdNameCode, first = true;
-    for(i = 0;i < idParts.length;i++) {
-      idPart = idParts[i];
-      idPartType = idPart.type;
-      if(!first) {
-        idString += "."
-      }
-      if(idPartType) {
-        nextIdNameCode = self[idPartType](idPart);
-        if(nextIdNameCode[0]) {
-          pushToArray(source, nextIdNameCode[1]);
-          idString += '"+' + nextIdNameCode[0] + '+"';
-          first = true
-        }
-      }else {
-        idString += idPart;
-        first = false
-      }
-    }
-    return idString
   }};
-  var compiler;
-  compiler = {parse:function(tpl) {
-    return parser.parse(tpl)
-  }, compileToStr:function(tpl) {
-    var func = this.compile(tpl);
-    return"function(" + func.params.join(",") + "){\n" + func.source.join("\n") + "}"
-  }, compile:function(tpl) {
-    var root = this.parse(tpl);
-    variableId = 0;
-    return gen.genFunction(root.statements, true)
-  }, compileToFn:function(tpl, config) {
-    var code = compiler.compile(tpl);
-    config = config || {};
-    var sourceURL = "sourceURL=" + (config.name ? config.name : "xtemplate" + xtemplateId++) + ".js";
-    return Function.apply(null, [].concat(code.params).concat(code.source.join("\n") + "\n//@ " + sourceURL + "\n//# " + sourceURL))
+  function isPromise(obj) {
+    return obj && obj instanceof Promise
+  }
+  function Promise(v) {
+    var self = this;
+    self[PROMISE_VALUE] = v;
+    if(v === undefined) {
+      self[PROMISE_PENDINGS] = [];
+      self[PROMISE_PROGRESS_LISTENERS] = []
+    }
+  }
+  Promise.prototype = {constructor:Promise, then:function(fulfilled, rejected, progressListener) {
+    if(progressListener) {
+      this.progress(progressListener)
+    }
+    return when(this, fulfilled, rejected)
+  }, progress:function(progressListener) {
+    if(this[PROMISE_PROGRESS_LISTENERS]) {
+      this[PROMISE_PROGRESS_LISTENERS].push(progressListener)
+    }
+    return this
+  }, fail:function(rejected) {
+    return when(this, 0, rejected)
+  }, fin:function(callback) {
+    return when(this, function(value) {
+      return callback(value, true)
+    }, function(reason) {
+      return callback(reason, false)
+    })
+  }, done:function(fulfilled, rejected) {
+    var self = this, onUnhandledError = function(e) {
+      S.log(e.stack || e, "error");
+      setTimeout(function() {
+        throw e;
+      }, 0)
+    }, promiseToHandle = fulfilled || rejected ? self.then(fulfilled, rejected) : self;
+    promiseToHandle.fail(onUnhandledError)
+  }, isResolved:function() {
+    return isResolved(this)
+  }, isRejected:function() {
+    return isRejected(this)
   }};
-  return compiler
+  function Reject(reason) {
+    if(reason instanceof Reject) {
+      return reason
+    }
+    var self = this;
+    Promise.apply(self, arguments);
+    if(self[PROMISE_VALUE] instanceof Promise) {
+      logger.error("assert.not(this.__promise_value instanceof promise) in Reject constructor")
+    }
+    return self
+  }
+  S.extend(Reject, Promise);
+  function when(value, fulfilled, rejected) {
+    var defer = new Defer, done = 0;
+    function _fulfilled(value) {
+      try {
+        return fulfilled ? fulfilled.call(this, value) : value
+      }catch(e) {
+        logError(e.stack || e);
+        return new Reject(e)
+      }
+    }
+    function _rejected(reason) {
+      try {
+        return rejected ? rejected.call(this, reason) : new Reject(reason)
+      }catch(e) {
+        logError(e.stack || e);
+        return new Reject(e)
+      }
+    }
+    function finalFulfill(value) {
+      if(done) {
+        logger.error("already done at fulfilled");
+        return
+      }
+      if(value instanceof Promise) {
+        logger.error("assert.not(value instanceof Promise) in when");
+        return
+      }
+      done = 1;
+      defer.resolve(_fulfilled.call(this, value))
+    }
+    if(value instanceof Promise) {
+      promiseWhen(value, finalFulfill, function(reason) {
+        if(done) {
+          logger.error("already done at rejected");
+          return
+        }
+        done = 1;
+        defer.resolve(_rejected.call(this, reason))
+      })
+    }else {
+      finalFulfill(value)
+    }
+    return defer.promise
+  }
+  function isResolved(obj) {
+    return!isRejected(obj) && isPromise(obj) && obj[PROMISE_PENDINGS] === undefined && (!isPromise(obj[PROMISE_VALUE]) || isResolved(obj[PROMISE_VALUE]))
+  }
+  function isRejected(obj) {
+    return isPromise(obj) && obj[PROMISE_PENDINGS] === undefined && obj[PROMISE_VALUE] instanceof Reject
+  }
+  KISSY.Defer = Defer;
+  KISSY.Promise = Promise;
+  Promise.Defer = Defer;
+  S.mix(Promise, {when:when, isPromise:isPromise, isResolved:isResolved, isRejected:isRejected, all:function(promises) {
+    var count = promises.length;
+    if(!count) {
+      return null
+    }
+    var defer = new Defer;
+    for(var i = 0;i < promises.length;i++) {
+      (function(promise, i) {
+        when(promise, function(value) {
+          promises[i] = value;
+          if(--count === 0) {
+            defer.resolve(promises)
+          }
+        }, function(r) {
+          defer.reject(r)
+        })
+      })(promises[i], i)
+    }
+    return defer.promise
+  }, async:function(generatorFunc) {
+    return function() {
+      var generator = generatorFunc.apply(this, arguments);
+      function doAction(action, arg) {
+        var result;
+        try {
+          result = generator[action](arg)
+        }catch(e) {
+          return new Reject(e)
+        }
+        if(result.done) {
+          return result.value
+        }
+        return when(result.value, next, throwEx)
+      }
+      function next(v) {
+        return doAction("next", v)
+      }
+      function throwEx(e) {
+        return doAction("throw", e)
+      }
+      return next()
+    }
+  }});
+  return Promise
 });
 

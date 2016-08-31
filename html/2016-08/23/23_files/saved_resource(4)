@@ -1,138 +1,73 @@
-KISSY.add('df-news/df-comment/report', function(S, Base, DOM, Node, Event, IO, Cookie, XTemplate, PopTip, Login,Header, Lang, URL) {
-	var $ = Node.all;
+/*
+* description 新华网地方频道用户登录、退出接口
+* time 2016-06-30
+* author jyn
+*/
 
-	var CDialog = {};
-	var language = {"language":"zh","err":"网络异常了，请稍后再试试~","err500":"服务器异常，稍后再试~","err403":"对不起，不允许评论哦~","err404":"对不起，找不到对应文章哦~","errIllegal":"非法操作哦","formatErr":"格式不正确","follow":"关注","followNbsp":"关&nbsp;注","reply":"回复","like":"顶","copy":"复制","report":"举报","publish":"发表","login":"登录","reg":"注册","logout":"注销","placeholder":"您的观点仅代表您本人，请文明发言，严禁散播谣言和诽谤他人","submit":"马上发表","submitFast":"快速发表","loginNo":"您还没有登陆哦~","loginNot":"您还未登录","parameErr":"参数错误","followErr":"好吧，好像您关注不了TA。","followSelfErr":"好吧，您不能关注自己。","followPicked":"已关注","copySuccess":"复制成功，按CTRL+V粘贴。","copyText":"请按住\"CTRL+C\"进行复制","replySuccess":"发表成功，等待审核！","reportSuccess":"举报成功！","commentSuccess":"发表成功！","hoursAgo":"小时前","behindStart":"后面还有","behindEnd":"条评论&gt;&gt;","hideReply":"已经隐藏重复盖楼","expand":"[点击展开]","otherWay":"其他方式：","weibo":"新华微博","quick":"Ctrl+Enter快捷提交","writeComments":"新闻评论","space":"炫空间","community":"新华社区","forum":"发展论坛","sike":"新华思客","commentsTatol":"条评论","latestComments":"最新评论","latestCommentsStart":"（评论","latestCommentsEnd":"条&nbsp;查看全部&gt;&gt;）","showMoreComments":"显示更多评论","rankingList":"新闻留言排行榜","prevPage":"上一页","nextPage":"下一页","seeRelatedNews":"查看相关新闻","replyPlaceholder":"难道您不想说些什么？","lengthStart":"最多只能发表","lengthEnd":"个文字哦~","loginErr":"用户名或密码错误！","reportErr":"举报失败。","authorizeErr":"授权未成功。","authorizeWait":"正在与腾讯微博通讯，请稍后再试哦","titleText":" | 新华评论","placeholderShort":"观点仅代表您本人，请文明发言！","optsDialogTitle":"提示信息","loginDialogTitle":"社区登录","unused":"从未使用过新华社区？","loginDialogReg":"注册新用户","loginUnited":"登录时使用：","more":"更多&gt;&gt;","loginTitle":"登录新华社区","user":"用户名：","helpCenter":"帮助中心","pwd":"密码：","forgetPwd":"忘记密码","reportDialogTitle":"用户举报","reportText":"感谢您的举报，新华安全中心将在调查取证后，对举报内容进行处理。","reportUser":"您举报的是","reportType":"请选择举报的类型","required":"(必选)","sexy":"色情","advertisement":"广告","fake":"假冒身份","politics":"政治","annoy":"骚扰","other":"其他","reportRemark":"您可以填写更多举报说明：","reportOther":"选择\"其他\"时，必须要输入说明哦","reportCheck":"最多输入100个文字说明哦","sure":"确定","cancel":"取消","quickLoginText":"恭喜您发表成功，同时您也获得了一个新华社区账号，^_^","nick":"昵称：","regDialogTitle":"完善账户信息","regText":"亲爱的新华社区用户，完善信息后，您可以直接使用该自定义账号登录社区了！","email":"邮箱：","confirmPwd":"确认密码：","imgCode":"验证码：","changeImgCode":"换一张！","submitText":"提交","userRequired":"用户名必须填写！","userMatch":"用户名由小写英文字母（a-z）和数字（0-9）构成！","userBetween":"用户名长度为{0}-{1}位！","userExists":"该用户名已存在！","timeout":"请求超时，稍后再试！","emailRequired":"邮箱必须填写！","emailMatch":"邮箱格式不正确哦！","pwdRequired":"密码必须填写！","pwdBetween":"密码长度为{0}-{1}位！","pwdEquals":"两次输入密码不相同！","imgCodeRequired":"验证码必须填写！","welcome":"欢迎 ","quickTipTitle":"提示：","quickTipText":"欢迎您体验炫空间！系统已自动为您注册炫空间帐号。帐号（用户名）：{username}　昵称：{nickname}　密码：{flower}","quickTipModify":"您可以现在{modifyNickname}和{modifyPassword}或者记住密码，以后进入“设置中心”的“安全输入值”进行修改。","modifyNickname":"修改昵称","modifyPassword":"修改密码","close":"关闭"} || {};
-	var effect = CDialog.effect || {};
-	// Lang.extend(CDialog.effect,{
-	// 	inputFlash:function(selector) {
-	// 		var node = Node.one(selector);
-	// 		if(!node.isRunning())
-	// 			node.animate({"background-color":"#FFBFBF"},{duration:0.5}).animate({"background-color":"#FFF"},{duration:1});
-	// 	}
-	// },true);
-	function Report() {
-		// var _self = this;
-		this.isLogin = false;
-
-		this.init();
-	}
-	
-	S.augment(Report, Base,{
-		ui:{
-			login:false,
-			report:false,
-			quick:false,
-			register:false
-		},
-		
-		options:{
-			rankSize:10,
-			articleSize:20,
-			tags:{
-				reportLinks:".ds-ctrl > .report"
-			}
-		},
-		cookie:{
-			comments:{
-				key:'wdlast',
-				value:null
-			}
-		},
-		tip:{
-			err:language.err,
-			err500:language.err500,
-			err403:language.err403,
-			err404:language.err404,
-			errIllegal:language.errIllegal
-		},
-		/**
-		 * 内存数据库 
-		 */
-		data:{
-			serverCookie:{appName:null,sid:null}, //全局COOKIE控制
-			user:{},	//用户信息状态存储
-			news:{},  //当前新闻信息
-			page:{},
-			more:3
-		},
-
-		init : function () {
-			this.installReport();
-		},
-		Trim : function (str) {
-			return str.replace(/^\s*|\s*$/g,"");
-		},
-		/**
-		 * 安装举报事件 
-		 */
-		installReport:function(){
-			var _this = this;
-			var evt = S.Event;
-			var dom = S.DOM;
-			var node = Node;
-			var reportUserId = '';
-			var tags = this.options.tags;
-			var _reportUrl = 'http://comment.home.news.cn/a/addReportAction.do';
-			
-			Event.detach('.report-dialog .cancel,.report-dialog .close', 'click');
-			Event.on('.report-dialog .cancel,.report-dialog .close', 'click', function(e){
-				$('.report-dialog').css('display','none');
-			});
-			
-
-			Event.detach(tags.reportLinks, 'click');
-			Event.on(tags.reportLinks, 'click', function(e){
-				var cid = this.getAttribute("data-cid");
-				var uid = this.getAttribute("data-uid");
-				var uname = this.getAttribute('data-uname');
-				var content = this.getAttribute('data-content');
-				var hot = this.getAttribute('hot');
-				var _cid = (hot && hot == 'true') ? '#COM_HOT_'+cid+"_content":'#COM_'+cid+"_content";
-
-				dom.html('.report-dialog .i-user span',uname);
-				dom.html('.report-dialog .i-text',content);
-
-				dom.css('.report-dialog','display','block');
-
-				Event.detach('.report-dialog .submit', 'click');
-				Event.on('.report-dialog .submit', 'click', function(e){
-					var reportType = dom.val('.t-type input:checked')
-					    reportContent = _this.Trim(dom.val('.report-dialog .m-text textarea'));
-					    if(!reportType){
-					    	new PopTip('warning',language.reportType);
-					    }else{
-							IO.get('/cloudc/loadUser.xhtm?loginCheck=true', function(json){
-								//登录用户做数据处理
-								if(json.code == 200){
-									this.isLogin = true;
-									reportUserId = json.data.name;
-									IO.jsonp(_reportUrl, {
-										'commentId':cid,
-										'reportUserId':reportUserId,
-										'commUserId':uid,
-										'reportType':reportType,
-										'reportContent':reportContent
-									    },function(res){
-									    	if(res.code = 200){
-									    	new PopTip('warning',language.reportSuccess);
-									    	}else{
-									    		new PopTip('warning',language.reportErr);
-									    	}
-									    	dom.css('.report-dialog','display','none');
-									},'json');
-								}else{
-									new Login();
-									return;
-								}
-							},'json');
-					    }
-				});
-			});
-		}
+KISSY.add('df-user/user',function(S,N,IO){
+	var $ = N.all;
+	var user = function(){
+		var _this = this;
+		this.init = function(){
 				
-	});
-	return Report;
-},{
-	requires : ['base', 'dom', 'node', 'event', 'io', 'cookie', 'xtemplate', 'gallery/pop-tip/1.0/index',  'login-intime/main']
-});
+		}
+	}
+
+	/*
+	*  判断登录状态
+	*  loginFun	 登录状态回调函数
+	*  logoutFun 未登录状态回调函数
+	*/
+	user.prototype.checkLogin = function( loginFun,logoutFun ){
+		new IO({
+				url:'http://comment.home.news.cn/a/checkLoginStatus.do',
+				data:{time:+new Date()},
+				dataType:'jsonp',
+				type:'get',
+				async:false,
+				success:function(d){
+					if(d.code == 200){
+						loginFun(d);
+					}else{
+						if(logoutFun){
+							logoutFun();
+						}
+					}
+				}
+		});
+	};
+			
+	/*
+	*  退出登录
+	*  signoutSuccess	 退出成功	若未传参则刷新页面
+	*  signoutFail       退出失败
+	*/
+	user.prototype.signOut = function( signoutSuccess , signoutFail){
+		new IO({
+				url:'http://comment.home.news.cn/a/ajaxLogout.do?_ksTS=1466734145314_214&callback=jsonp215',
+				dataType:'jsonp',
+				type:'get',
+				async:false,
+				success:function(d){
+					if(d.code == 200){
+						if( signoutSuccess ){
+							signoutSuccess(d)
+						}else{
+							location.reload();	
+						}
+					}else{
+						if(signoutFail){
+							signoutFail();
+						}else{
+							console.log(d);
+							alert("退出失败！");
+						}
+					}
+				},
+				error:function(){
+					location.reload();
+				}
+		});
+	}
+	return user;
+},{requires:['node','io']})

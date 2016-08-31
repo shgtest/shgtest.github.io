@@ -1,159 +1,183 @@
 /**
- * @author  wangdanfeng
- * @method  分享
- * @version 1.0
+ * @author	wangdanfeng
+ * @method	分享
+ * @version	1.0
  */
- .xuan_share{
-    position: relative;
-    margin: 20px 0;
-    width: 250px;
-    height: 36px;
-    z-index: 2;
- }
- .xuan_share .share_title_wrap{
-    float: left;
-    margin-top: 10px;
-}
-.xuan_share .share_content_wrap{
-    /*float: left;*/
-    margin-left: 10px;
-    width: 293px;
-    *width: 200px;
-    height: 38px;
-}
-.xuan_share .share_content_wrap a{
-    display: inline-block;
-    width: 32px;
-    height: 32px;
-    padding-right: 10px;
-    background: url(http://tmisc.home.news.cn/cloudnews/ln-xuanzhi/subnews/images/news-detail/share-close-print.png) no-repeat ;
-}
-.xuan_share .share_content_wrap .fun{
-    background-position: 0 -10px;
-}
-.xuan_share .share_content_wrap .fun:hover{
-    background-position: 0 -60px;
-}
-.xuan_share .share_content_wrap .bds_weixin{
-    background-position: -52px -10px;
-}
-.xuan_share .share_content_wrap .bds_weixin:hover{
-    background-position: -52px -60px;
-}
-.xuan_share .share_content_wrap .bds_tsina{
-    background-position: -105px -10px;
-}
-.xuan_share .share_content_wrap .bds_tsina:hover{
-    background-position: -105px -60px;
-}
-.xuan_share .share_content_wrap .bds_qzone{
-    background-position: -158px -10px;
-}
-.xuan_share .share_content_wrap .bds_qzone:hover{
-    background-position: -158px -60px;
-}
-.xuan_share .qrcode{
-    width: 360px;
-    height: 440px;
-    border: 1px solid #d8d8d8;
-    display: none;
-    padding: 10px;
-    position: absolute;
-    z-index: 1000;
-    bottom: 45px;
-    right: 0;
-    background-color: #fff;
-}
 
-.xuan_share .qrcode .close{
-    background: url(http://tmisc.home.news.cn/cloudnews/ln-xuanzhi/subnews/images/news-detail/share-close-print.png) no-repeat ;
-    background-position: 0 -184px;
-    width: 22px;
-    height: 22px;
-    float: right;
-    cursor: pointer;
-    position: relative;
-    z-index: 2;
-}
-.xuan_share .qrcode span{
-    display: block;
-    font-size: 16px;
-    color: #000;
-}
-.xuan_share .code_table{
-	text-align: center;
-    margin: 20px 0;
-}
-.xuan_share .code_table img{
-    width: 300px;
-    height: 300px;
-}
-/*分享2*/
-.fixed_share_wrap .fixed_share{
-    width: 42px;
-    display: block;
-    /*position: relative;*/
-    z-index: 101;
-}
-.fixed_share_wrap .share_box{
-    position: relative;
-}
-.fixed_share_wrap .fixed_share .popup{
-    position: absolute;
-    z-index: -1;
-    right: 52px;
-    top: 0;
-    border: 1px solid #e0e0e0;
-    height: 42px;
-    background-color: #fff;
-    display: none;
-}
-.fixed_share_wrap .fixed_share .xuan_share{
-    margin-top: 5px;
-    margin-bottom: 0;
-    padding-left: 5px;
-}
-.fixed_share_wrap .fixed_share .fs{
-    background: url(http://tmisc.home.news.cn/cloudnews/ln-xuanzhi/subnews/images/news-detail/share-close-print.png) no-repeat ;
-    width: 42px;
-    height: 42px;
-    display: block;
-    margin-top: 10px;
-}
-.fixed_share_wrap .fixed_share .qrcode_icon{
-    background-position: 0 -110px;
-    
-}
-.fixed_share_wrap .fixed_share .share{
-    background-position: -57px -110px;
-    
-}
-.fixed_share_wrap .fixed_share .back{
-    background-position: -114px -110px;
-    
-}
-.fixed_share_wrap .qrcode2{
-    width: 120px;
-    height: 180px;
-    border: 1px solid #d8d8d8;
-    display: none;
-    padding: 10px;
-    position: absolute;
-    right: 52px;
-    bottom: 104px;
-    z-index: 10;
-    background-color: #fff;
-    font-size: 14px;
-    color: #808080;
-}
-.fixed_share_wrap .qrcode2 .dec{
-    display: block;
-    margin: 15px;
-}
-.fixed_share_wrap .code_table2{
-	text-align: center;
-}
-.fixed_share_wrap .code_table2 img{
-    width:98px;
-    height:98px;
-}
+
+
+KISSY.add('xuan-share/2.0/main', function(S, Base, DOM, Node, Event, IO, JSON, Cookie, XTemplate, Anim) {
+	var $ = Node.all;
+	
+	function XuanShare() {
+		var _self = this;
+		_self.CMD_MAP = {
+			'xinhua': "http://t.home.news.cn/share.jsp?url={{href}}&title={{title}}&pic=",
+			'qzone': "http://sns.qzone.qq.com/cgi-bin/qzshare/cgi_qzshare_onekey?url={{href}}&title={{title}}&desc=&summary=&site=",
+			'tsina':"http://service.weibo.com/share/share.php?url={{href}}&title={{title}}&appkey=1343713053&searchPic=false"
+		};
+		_self.init();
+	}
+	
+	S.augment(XuanShare, Base,{
+		init : function() {
+			var _self = this;
+			_self._functionBar();
+			_self._renderEvent();
+
+		},
+		_functionBar: function(){
+            var _self = this;
+
+			//固定分享2
+			var _width = $(window).width()>1000?($(window).width()-1000)/2:0;
+			var _widthFixed = $('.fixed_share').width();
+			var _right = _width-_widthFixed-10;
+			$('.fixed_share').css({'display':'block','position':'fixed','bottom':'0','right':_right});
+
+			//回到顶部,需要写html，否则IE不支持
+			$("#fixed_share .back").on("click",function(){
+			    $('body,html').animate({scrollTop:0}); 
+			    return false;
+			});
+
+			$(window).on('resize',function(){
+				if($(this).width() < 1000){
+					$('.fixed_share').css({'right':'0'});
+				}else{
+					var _width = $(window).width()>1000?($(window).width()-1000)/2:0;
+					var _widthFixed = $('.fixed_share').width();
+					var _right = _width-_widthFixed-10;
+					$('.fixed_share').css({'right':_right});
+				}
+			});
+			
+			$('#fixed_share .share').on('mouseover',function(){
+				$('.popup').show();
+				$('#fixed_share .share_box').on('mouseleave',function(){
+					$('.popup').hide();
+				});
+			});
+			//二维码小图
+			$('#fixed_share .qrcode_icon').on('mouseout',function(){
+				DOM.css('.qrcode2',{display:'none'});
+			});
+			$('#fixed_share .qrcode_icon').on('mouseover',function(){
+				//二维码改为后台生成。
+				// if($('#code_table2').one("canvas")==null){
+				// 	_self.createQrcode('#code_table2',156,156);
+					$("#code_table2").fadeIn('slow');
+				// }
+   				DOM.css('.qrcode2',{display:'block'});
+			});
+        },
+		createQrcode : function(sel,width,height){
+				var url = location.href,
+				    qrcode	= new QRCode(-1, 2);
+				qrcode.addData(url);
+				qrcode.make();
+
+				var h = {
+					width: width,
+					height: height,
+					typeNumber: -1,
+					correctLevel: 2,
+					background: "#ffffff",
+					foreground: "#000000"
+				};
+				var c = document.createElement("canvas");
+				$(sel).html("").append(c);
+				c.width = h.width;
+				c.height = h.height;
+				if(c.getContext){
+					var d = c.getContext("2d");
+				}
+				var c = qrcode.getModuleCount(),
+					b = h.width / c,
+					e = h.height / c;
+				for (var f = 0; f < c; f++){ 
+					for (var i = 0; i < c; i++) {
+						d.fillStyle = qrcode.isDark(f, i) ? h.foreground : h.background;
+						var g = Math.ceil((i + 1) * b) - Math.floor(i * b),
+							j = Math.ceil((f + 1) * b) - Math.floor(f * b);
+						d.fillRect(Math.round(i * b), Math.round(f * e), g, j);
+					}
+				}
+		},
+		offsetTH:function(formWidth,formHeight){
+			var formLeft,formTop;
+			var winWidth = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth || window.screen.width;
+			var winHeight = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight || window.screen.height;
+
+			var headH = window.screen.height - window.screen.availHeight;
+			if(winWidth > formWidth){
+				formLeft = (winWidth - formWidth) / 2;
+				formTop = (winHeight - formHeight) / 2 - headH;
+				formTop = formTop > 0 ? formTop :formTop + headH;
+			}else{
+				formLeft = (winWidth - formWidth) / 2;
+				formTop = headH;
+			}
+			return {left:formLeft,top:formTop};
+		},
+		_renderEvent : function() {
+			var _self = this;
+			var data = {
+			  			title: document.title,
+			  			href: location.href
+			  		};
+
+			//分享到微信
+			Event.detach('.share_content_wrap .bds_weixin', 'click');
+			Event.on('.share_content_wrap .bds_weixin', 'click', function(e){
+				var _cur = e.currentTarget,
+				//_cp = DOM.parent(_cur, '.bdsharebuttonbox'),
+   				//_cpdiv = DOM.next(DOM.parent(_cp,'.share_content_wrap'), '.qrcode');
+   				//sel = $('_cpdiv').one(".code_table");
+   				_cpdiv = DOM.get('.qrcode');
+
+				// if($(_cpdiv).one("canvas")==null){
+				// 	_self.createQrcode(sel,206,206);
+					$(".code_table").fadeIn('slow');
+				// }
+
+   				//二维码居中
+				var offset = _self.offsetTH($(_cpdiv).width(),$(_cpdiv).height());
+				DOM.css(_cpdiv,{'position': 'fixed'});
+				DOM.css(_cpdiv,offset);
+				$(_cpdiv).show();
+
+			});
+
+	   		// 关闭微信close
+			$('.close').on('click',function(event){
+   				DOM.css('.qrcode',{display:'none'});
+	   		});
+			$('.bdsharebuttonbox a','.share_content_wrap').on('click',function(){	
+			  	var day = new Date().getDay(),
+			  		// cmd = $(this).data('cmd');
+			  		cmd = DOM.attr(this,'data-cmd');
+			  		
+			  	if(_self.CMD_MAP[cmd]){
+			  		this.href = _self.CMD_MAP[cmd].replace(/\{\{(\w+)\}\}/g,function(match,key){
+			  			return data[key] ? encodeURIComponent( data[key] ) : "";
+			  		});
+			  	}
+		  	});
+		},
+		//获取新闻ID，并组织成【站点类型-新闻ID】的形式
+		getNewsId:function(){
+			var _newsId = null;
+				_uuid = DOM.attr('#news_title', 'data-uuid');
+			if(_uuid){
+				//如果是xuannews开头或者长度是32为的站点类型是2，否则为1
+				_newsId = ((_uuid.length==32 || _uuid.substr(0,8)=='xuannews')?'2-':'1-') + _uuid;
+			}
+			return _newsId;
+		}
+	});
+	return XuanShare;
+},{
+	 requires : ['base', 'dom', 'node', 'event', 'io', 'json', 'cookie', 'xtemplate', 'anim','xuan-share/2.0/xuan-share.css']
+});
+
