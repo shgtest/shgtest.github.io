@@ -1,0 +1,73 @@
+/*
+* description 新华网地方频道用户登录、退出接口
+* time 2016-06-30
+* author jyn
+*/
+
+KISSY.add('df-user/user',function(S,N,IO){
+	var $ = N.all;
+	var user = function(){
+		var _this = this;
+		this.init = function(){
+				
+		}
+	}
+
+	/*
+	*  判断登录状态
+	*  loginFun	 登录状态回调函数
+	*  logoutFun 未登录状态回调函数
+	*/
+	user.prototype.checkLogin = function( loginFun,logoutFun ){
+		new IO({
+				url:'http://comment.home.news.cn/a/checkLoginStatus.do',
+				data:{time:+new Date()},
+				dataType:'jsonp',
+				type:'get',
+				async:false,
+				success:function(d){
+					if(d.code == 200){
+						loginFun(d);
+					}else{
+						if(logoutFun){
+							logoutFun();
+						}
+					}
+				}
+		});
+	};
+			
+	/*
+	*  退出登录
+	*  signoutSuccess	 退出成功	若未传参则刷新页面
+	*  signoutFail       退出失败
+	*/
+	user.prototype.signOut = function( signoutSuccess , signoutFail){
+		new IO({
+				url:'http://comment.home.news.cn/a/ajaxLogout.do?_ksTS=1466734145314_214&callback=jsonp215',
+				dataType:'jsonp',
+				type:'get',
+				async:false,
+				success:function(d){
+					if(d.code == 200){
+						if( signoutSuccess ){
+							signoutSuccess(d)
+						}else{
+							location.reload();	
+						}
+					}else{
+						if(signoutFail){
+							signoutFail();
+						}else{
+							console.log(d);
+							alert("退出失败！");
+						}
+					}
+				},
+				error:function(){
+					location.reload();
+				}
+		});
+	}
+	return user;
+},{requires:['node','io']})

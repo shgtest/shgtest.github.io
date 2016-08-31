@@ -1,0 +1,568 @@
+/**
+ * @author	chenpeng
+ * @method	新闻评论
+ * @version	1.2
+ */
+KISSY.add('df-news/df-comment/main', function(S, Base, DOM, Node, Event, IO, Cookie, XTemplate, PopTip, Login, Report) {
+
+	var $ = Node.all;
+
+
+	var language = {"language":"zh","err":"网络异常了，请稍后再试试~","err500":"服务器异常，稍后再试~","err403":"对不起，不允许评论哦~","err404":"对不起，找不到对应文章哦~","errIllegal":"非法操作哦","formatErr":"格式不正确","follow":"关注","followNbsp":"关&nbsp;注","reply":"回复","like":"顶","copy":"复制","report":"举报","publish":"发表","login":"登录","reg":"注册","logout":"注销","placeholder":"您的观点仅代表您本人，请文明发言，严禁散播谣言和诽谤他人","submit":"马上发表","submitFast":"快速发表","loginNo":"您还没有登陆哦~","loginNot":"您还未登录","parameErr":"参数错误","followErr":"好吧，好像您关注不了TA。","followSelfErr":"好吧，您不能关注自己。","followPicked":"已关注","copySuccess":"复制成功，按CTRL+V粘贴。","copyText":"请按住\"CTRL+C\"进行复制","replySuccess":"发表成功，等待审核！","reportSuccess":"举报成功！","commentSuccess":"发表成功！","hoursAgo":"小时前","behindStart":"后面还有","behindEnd":"条评论&gt;&gt;","hideReply":"已经隐藏重复盖楼","expand":"[点击展开]","otherWay":"其他方式：","weibo":"新华微博","quick":"Ctrl+Enter快捷提交","writeComments":"新闻评论","space":"炫空间","community":"新华社区","forum":"发展论坛","sike":"新华思客","commentsTatol":"条评论","latestComments":"最新评论","latestCommentsStart":"（评论","latestCommentsEnd":"条&nbsp;查看全部&gt;&gt;）","showMoreComments":"显示更多评论","rankingList":"新闻留言排行榜","prevPage":"上一页","nextPage":"下一页","seeRelatedNews":"查看相关新闻","replyPlaceholder":"难道您不想说些什么？","lengthStart":"最多只能发表","lengthEnd":"个文字哦~","loginErr":"用户名或密码错误！","reportErr":"举报失败。","authorizeErr":"授权未成功。","authorizeWait":"正在与腾讯微博通讯，请稍后再试哦","titleText":" | 新华评论","placeholderShort":"观点仅代表您本人，请文明发言！","optsDialogTitle":"提示信息","loginDialogTitle":"社区登录","unused":"从未使用过新华社区？","loginDialogReg":"注册新用户","loginUnited":"登录时使用：","more":"更多&gt;&gt;","loginTitle":"登录新华社区","user":"用户名：","helpCenter":"帮助中心","pwd":"密码：","forgetPwd":"忘记密码","reportDialogTitle":"用户举报","reportText":"感谢您的举报，新华安全中心将在调查取证后，对举报内容进行处理。","reportUser":"您举报的是","reportType":"请选择举报的类型","required":"(必选)","sexy":"色情","advertisement":"广告","fake":"假冒身份","politics":"政治","annoy":"骚扰","other":"其他","reportRemark":"您可以填写更多举报说明：","reportOther":"选择\"其他\"时，必须要输入说明哦","reportCheck":"最多输入100个文字说明哦","sure":"确定","cancel":"取消","quickLoginText":"恭喜您发表成功，同时您也获得了一个新华社区账号，^_^","nick":"昵称：","regDialogTitle":"完善账户信息","regText":"亲爱的新华社区用户，完善信息后，您可以直接使用该自定义账号登录社区了！","email":"邮箱：","confirmPwd":"确认密码：","imgCode":"验证码：","changeImgCode":"换一张！","submitText":"提交","userRequired":"用户名必须填写！","userMatch":"用户名由小写英文字母（a-z）和数字（0-9）构成！","userBetween":"用户名长度为{0}-{1}位！","userExists":"该用户名已存在！","timeout":"请求超时，稍后再试！","emailRequired":"邮箱必须填写！","emailMatch":"邮箱格式不正确哦！","pwdRequired":"密码必须填写！","pwdBetween":"密码长度为{0}-{1}位！","pwdEquals":"两次输入密码不相同！","imgCodeRequired":"验证码必须填写！","welcome":"欢迎 ","quickTipTitle":"提示：","quickTipText":"欢迎您体验炫空间！系统已自动为您注册炫空间帐号。帐号（用户名）：{username}　昵称：{nickname}　密码：{flower}","quickTipModify":"您可以现在{modifyNickname}和{modifyPassword}或者记住密码，以后进入“设置中心”的“安全输入值”进行修改。","modifyNickname":"修改昵称","modifyPassword":"修改密码","close":"关闭"};
+	
+	function XuanComment() {
+		var _self = this;
+		_self.commentUserId='';
+		_self.tags = {
+				idHotCommentWap:'#good_comment_list',
+				idNewsCommentWap:'#lastest_comment_list',
+				urlHotComment:'http://comment.home.news.cn/a/commentsHot.do',
+				urlNewsComment:'http://comment.home.news.cn/a/newsCommAll.do',
+				dingLinks:"#ding",
+				reportLinks:"#report"
+			};
+		_self.commentFlag='';	
+	}
+	
+	S.augment(XuanComment, Base,{
+		init : function() {
+			var _self = this;
+			window.HasDfComment=true;//页面模版上如果new过 就不执行，以后发布的页面模版不再单独调用评论组件，统一放到main里
+			_self.fixScroll(); 	
+			//setup cookie for comments position end	
+			_self.GetStatus();//登陆前判断commentFlag状态
+	
+		},
+		GetStatus:function(){
+			var _self=this;
+			new IO({
+							dataType:'jsonp',
+							url:encodeURI('http://comment.home.news.cn/a/newsInfo.do?newsId='+_self.getNewsId()),
+							jsonp:"callback",
+							success:function(json){
+								/*
+								_self.commentFlag=json.commentFlag?json.commentFlag:'closed';
+								new IO({
+									dataType:'jsonp',
+									url:'http://xuan.news.cn/cloudc/loadUser.xhtm?loginCheck=true',
+									success:function(json){
+										if (json.code == 200){
+											_self.renderLogin(json.data.nickName);
+										
+										}else{
+											_self.renderLoginOut();
+											if(_self.commentFlag=='closed'){
+												DOM.css('#xuan_comment_box', 'display', 'none');
+												DOM.css(DOM.parent('#function_bar .fun_comment', 'li'), 'display', 'none');
+												
+												Event.on('#xuan_comment_publish', 'click', function(e){
+													$('#xuan_comment_content').val('');
+													$('#xuan_comment_content_wrap .text_placeholder').show();
+											
+													new PopTip('warning','暂时不开放评论功能');
+												});
+
+											}else{
+												_self.look();
+											}
+											
+										}										
+									}
+								});	
+							    */
+
+								_self.commentFlag=json.commentFlag?json.commentFlag:'closed';
+								new IO({
+									url:'http://comment.home.news.cn/a/checkLoginStatus.do',
+									data:{time:+new Date()},
+									dataType:'jsonp',
+									type:'get',
+									async:false,
+									success:function(json){
+										
+										if (json.code == 200){
+											DOM.css('#xuan_comment_box', 'display', 'block');
+											if(!!json.content.userid) _self.commentUserId =json.content.userid;
+											_self.renderLogin(json.content.nickname);
+										}else{
+											_self.renderLoginOut();
+											if(_self.commentFlag=='closed'){
+												DOM.css('#xuan_comment_box', 'display', 'none');
+												DOM.css(DOM.parent('#function_bar .fun_comment', 'li'), 'display', 'none');
+												Event.on('#xuan_comment_publish', 'click', function(e){
+													$('#xuan_comment_content').val('');
+													$('#xuan_comment_content_wrap .text_placeholder').show();
+													new PopTip('warning','暂时不开放评论功能');
+												});
+											}else{
+												DOM.css('#xuan_comment_box', 'display', 'block');
+												_self.look();
+											}
+											
+										}										
+									}
+								});
+							}
+						});
+		},
+
+		//setup cookie for comments position start
+		SetCookie : function(sName, sValue,expireHours) {
+			var str= sName + '=' + escape(sValue);
+			if(expireHours){ 
+	            var d=new Date(); 
+	            d.setTime(d.getTime()+expireHours*3600*1000); 
+	            str+='; expires='+d.toGMTString(); 
+	       	   } 
+       	    document.cookie =str;
+		},
+		GetCookie : function (sName) {
+			var _self = this;
+			// var Trim=function(strValue){return strValue.replace(/^\s*|\s*$/g, '');}
+			var aCookie = document.cookie.split(';');
+			for (var i = 0; i < aCookie.length; i++) {
+				var aCrumb = aCookie[i].split('=');
+				if (sName == _self.Trim(aCrumb[0])) {
+					return (aCrumb[1]);
+				}
+			}
+			return null;
+		},
+		fixScroll : function(){
+			
+			var _self=this;
+			if (_self.GetCookie('commentscroll') != null) {
+				document.documentElement.scrollTop=parseInt(_self.GetCookie('commentscroll'));
+				document.body.scrollTop=parseInt(_self.GetCookie('commentscroll'));
+				_self.SetCookie('commentscroll','',-1);
+			};
+
+		},
+		// setup cookie for comments position end
+		renderLogin: function(nickName){
+
+			var _self = this;
+			var marginLeft = (DOM.width('#xuan_comment_content_wrap')-DOM.width('.text_placeholder'))/2;
+			$('#xuan_comment_content_wrap .text_placeholder').css({'line-height':'25px','margin-left': marginLeft+'px'});
+			
+			DOM.removeAttr('#xuan_comment_content',"disabled");
+			     //添加未登陆状态下文字　20141010
+			
+					DOM.attr('#user_info_wrap', 'login', 'true');
+
+					//add nickName start
+					var commentUserName=nickName;
+					if(commentUserName){
+					$('#xuan_comment_user_link').append('<span id="commentUserName" style="text-align:center">'+commentUserName+'</span>');
+					}
+					//add nickName end
+					Event.detach('#xuan_comment_content_wrap', 'click focus');
+					Event.on('#xuan_comment_content_wrap', 'click focus', function(e){
+						$('#xuan_comment_content_wrap .text_placeholder').hide();
+						document.getElementById('xuan_comment_content').focus();
+					});
+					Event.detach('#xuan_comment_content', 'blur');
+					Event.on('#xuan_comment_content', 'blur', function(e){
+						var _cur = e.currentTarget;
+
+						if(_self.Trim(DOM.val(_cur).toString()) == ''){
+							$('#xuan_comment_content_wrap .text_placeholder').show();
+						}
+					});
+					
+				
+
+						if(_self.commentFlag == 3){ //能看能评
+							_self.publish();
+							_self.look();
+							//如果该稿件有表情模块，就可以发表表情
+							DOM.css('#xuan_news_face', 'display', 'block');
+							// };
+						}else if(_self.commentFlag == 2){//只能看不能评论
+							_self.look();
+							$('.publish_box_wrap').hide();
+							DOM.css('.comment_list_wrap','border-top-width','1px');
+						}else if(_self.commentFlag == 1){//只能评论不能看
+							_self.publish();
+							//如果该稿件有表情模块，就可以发表表情
+							DOM.css('#xuan_news_face', 'display', 'block');
+						}else{//新闻关闭
+							DOM.css('#xuan_comment_box', 'display', 'none');
+							DOM.css(DOM.parent('#function_bar .fun_comment', 'li'), 'display', 'none');
+							
+							Event.on('#xuan_comment_publish', 'click', function(e){
+								$('#xuan_comment_content').val('');
+								$('#xuan_comment_content_wrap .text_placeholder').show();
+						
+								new PopTip('warning','暂时不开放评论功能');
+							});
+						}
+	
+				},
+
+		    	
+		renderLoginOut: function(){		
+					_self=this;	
+		    		$('#xuan_comment_content').attr('disabled','true');
+		    		Event.detach('#xuan_comment_publish', 'click');
+					Event.on('#xuan_comment_publish', 'click',function(){
+						new PopTip('warning','请先登录！');
+					});
+		    		// DOM.css('#xuan_comment_publish','background-color','#ccc');
+					var tmpTxt='<a style="cursor:pointer"  id="xuan-comment-askLogin" target="_self">登录</a>'+
+								' 、 '+'<a href="http://login.home.news.cn/reg.jsp" target="_blank" id="xuan-comment-askRegister">注册</a>'+
+								' 或 '+'<span style="cursor:pointer;"  id="xuan-comment-askTest">使用一键体验帐号</span>';
+								// ' 或 '+'<span style="cursor:pointer;color:#5682c2"  id="xuan-comment-askTest">使用一键体验帐号</span>';
+					tmpTxt=S.unEscapeHTML(tmpTxt);
+					$('#xuan_comment_content_wrap .text_placeholder').empty().append(tmpTxt);
+					
+					//解决由于xuan_comment_box隐藏造成的下一行代码中DOM.width('#xuan_comment_content_wrap')宽度计算错误问题
+					$("#xuan_comment_box").show();
+					
+					var marginLeft = (DOM.width('#xuan_comment_content_wrap')-DOM.width('.text_placeholder'))/2;
+					$('#xuan_comment_content_wrap .text_placeholder').css({'line-height':'50px','margin-left': marginLeft+'px'});
+					//登录
+					Event.detach('#xuan-comment-askLogin', 'click');
+					Event.on('#xuan-comment-askLogin', 'click',function(){
+						var _login = new Login();
+					});
+					//一键体验帐号
+					Event.detach('#xuan-comment-askTest', 'click');
+					// Event.on('#xuan-comment-askTest',{
+					// 	'mouseenter':function(){DOM.css('#xuan-comment-askTest', 'color','#2d3e50')},
+					// 	'mouseleave':function(){DOM.css('#xuan-comment-askTest', 'color','#5682c2')}
+					// });
+
+
+					Event.on('#xuan-comment-askTest', 'click',function(){
+						new IO({
+							dataType:'jsonp',
+							url:'http://login.home.news.cn/fastregist.do',
+							data:{'ajax':0},
+							jsonp:'popRegistCallback',
+							success:function(d){//20160530 更新一键注册
+								if(d && d.code == 0){
+
+									setTimeout(function(){
+										top.location.reload();
+									},3000);
+									
+									var _url = d.url.split(',');
+									new IO({
+										dataType:'jsonp',
+										url:_url[0],
+										jsonp:"callback",
+										success:function(d){
+											d = eval("(" + d + ")");
+											if(d.code == 200){
+												if(_url[1]){
+													new IO({
+														dataType:'jsonp',
+														url:_url[1],
+														jsonp:"callback",
+														success:function(d){
+															d = eval("(" + d + ")");
+															if(d.code == 200){
+																
+																that.loginState = true;
+																if(that._callbackFunc){
+																	that._callbackFunc();
+																}
+																else if(that._callbackUrl){
+																	top.location.href = 'http://' + top.location.host +  top.location.pathname + '?backurl=' + that._callbackUrl;
+																}else{
+																	top.location.reload();
+																}
+															}
+														}
+													});
+												}
+											}
+										}
+									});
+								}
+								else if(d && d.code == 2){
+									alert('已经是登录状态！');
+									top.location.reload();
+								}
+								else if(d && d.code == 1){
+									alert(d.msg);
+									}
+							}
+						});
+
+					});
+
+		},
+		publish: function(){
+			var _self = this,
+				_isLogin = DOM.get('#user_info_wrap')?DOM.attr('#user_info_wrap', 'login'):'false';
+			function fmSubmit(src,params){
+			    var creatFm = document.createElement("form"); 
+			    var len=params.length ; 
+			    //一定要加入到body中！！   
+			    document.body.appendChild(creatFm);
+			    creatFm.method = 'post';
+				creatFm.action = src;
+			 	creatFm.innerHTML = '';
+				 //创建隐藏表单
+				 for(var i=0;i<len;i++){
+					 var newElement = document.createElement("input");
+		
+				    newElement.setAttribute("type","hidden");
+				     newElement.setAttribute("name",params[i].pName);
+				    newElement.setAttribute("value",params[i].pValue);
+				    creatFm.appendChild(newElement);
+				 }
+	 
+			    creatFm.submit();
+			}
+
+			Event.detach('#xuan_comment_publish', 'click');
+			Event.on('#xuan_comment_publish', 'click', function(e){
+				var _cur = e.currentTarget,
+					_newsId = _self.getNewsId(),
+					_shareToWb = !DOM.prop('#xuan_comment_share_wb', 'checked')?0:1,
+					_content = DOM.val('#xuan_comment_content');
+				
+				if(_self.Trim(_content) == ''){
+					new PopTip('warning','评论内容不能为空');
+					return false;
+				}
+
+				fmSubmit('http://comment.home.news.cn/a/adComment.do',[
+								{'pName':'newsId', 'pValue':_newsId},
+								{'pName':'parentId', 'pValue':''},
+								{'pName':'shareToWb', 'pValue':_shareToWb},
+								{'pName':'sourceId', 'pValue':3},
+								{'pName':'type', 'pValue':1},
+								{'pName':'userId', 'pValue':_self.commentUserId ? _self.commentUserId : null},
+								{'pName':'rurl', 'pValue': window.location.href},
+								{'pName':'content', 'pValue': _content}  //服务器跳转返回地址
+							])
+
+				/*IO.post('/a/adComment.do',{
+								'newsId': _newsId,
+								'parentId': '',
+								'shareToWb': _shareToWb,
+								'sourceId': 3,
+								'type': 0,
+								'userId': _self.commentUserId ? _self.commentUserId : null,
+								'rurl': window.location.href,	  //服务器跳转返回地址
+								'content': _content
+							},function(json){
+								$('#xuan_comment_content').val('');
+								$('#xuan_comment_content_wrap .text_placeholder').show();
+								
+								if(json.code == 200){
+									new PopTip('ok','评论成功');
+								}else{
+									new PopTip('warning','评论失败');
+								}
+							},'json');
+*/
+
+
+					/*
+					请求地址：http://comment.home.news.cn/a/adComment.do
+					输入：content	String必填 评论内容
+					newsId  String 必填 新闻id（注意此newsId格式为fromType-newsId）
+					parentId	  int 非必填 上级评论id，回复评论时需要
+					shareToWb	int 非必填 是否分享微博 0-不分享 1-分享
+					sourceId	  int  非必填 1-新华网页面 2-新闻客户端  3-炫知
+					type  int 非必填 0-返回json方式 1-返回页面
+					rurl  String非必填 当 type=1时的跳转地址 非ajax方式跳转地址
+					userId  int 非必填 用户ID，与SSO相通的应用，此参数可不带
+					输出：登录用户   {"code":200,"content":{},"description":"操作成功"}
+					未登录用户    {"code":200,"content":{"nickname":"不了了之328744","userid":"74482337","username":"eqsmbe54939"},"description":"操作成功"}
+					备注：思客来源用户,如果用户未登录，userId需要将“匿名”用户的userId作为参数*/
+
+
+
+			
+			});
+		},
+		nextPage: function () {
+			// body...
+		},
+		loadComment: function (_jsonpUrl,comment_list_id,pageNum) {
+						var _self = this,
+							_newsId = _self.getNewsId();
+				
+
+			var _html = '{{#each contentAll}}'
+						+'<div class="comment_item two_column">'
+						  +'<div class="c_user_info clearfix">'
+						    +'<div class="nick">'
+						      +'<img src="{{userImgUrl}}" alt="" class="nick_pic">'
+						      +'<a href="http://{{userName}}.home.news.cn/" class="nick_name" target="_blank">{{nickName}}</a>'
+						    +'</div>'
+						    +'<div class="item_time" data-timestamp="{{commentTime}}"></div>'
+						  +'</div>'
+						  +'<div class="content" title="{{content}}">{{content}}</div>'
+						  +'<div class="ds-ctrl">'
+						  +'<a href="javascript:void(0)" class="ding"  data-cid="{{commentId}}">顶<span class="num">(<em>'
+						  	// +'{{upAmount}}'
+						  	+'{{@if upAmount}}{{upAmount}}{{else}}0{{/if}}'
+							+'</em>)</span></a>'
+						    // +'<a href="javascript:void(0)" class="report">举报</a>'
+						    	+'<a href="javascript:;" class="report" hot="true" data-cid="{{commentId}}" data-uid="{{userId}}" data-uname="{{nickName}}" data-content="{{content}}">举报</a>'
+						    +'</div>'
+						+'</div>'
+						+'{{#if totalRows>10&&xindex+1===xcount}}'
+						+'<div class="more clearfix">'
+	                        +'<a href="javascript:void(0);">查看更多评论</a>'
+	                    +'</div>'
+						+'{{/if}}'
+						 +'{{#if totalRows<=10&&xindex+1===xcount}}'
+	                    +'<div class="no-more clearfix">'
+	                        +'<a href="javascript:void(0);" target="_blank">没有更多评论</a>'
+	                    +'</div>'
+	                    +'{{/if}}'
+						+'{{/each}}';
+			
+			// var _jsonpUrl = encodeURI('http://comment.home.news.cn/a/commentsHot.do?newsId='+_newsId+'&pid=1');
+			
+			IO.jsonp(_jsonpUrl+'&pid='+pageNum, function(json){
+				if(json.totalRows == 0){
+					DOM.addClass('.item .more','no-more');
+					return;
+				}else{
+					var _xt = new XTemplate(_html).render(json);
+					// DOM.empty(comment_list_id);
+					DOM.remove('.item .more');
+					// DOM.remove('.item .no-more');
+					if ($(_xt).appendTo(comment_list_id)) {
+						S.each($('.item_time'), function(v, k){
+							var _timestamp = DOM.attr(v, 'data-timestamp');
+							
+							_self.timeFormat(_timestamp);
+							DOM.text(v, _self.timeFormat(_timestamp));
+						});
+						
+					}
+					//增加加载更多事件
+					if($('.item .more').length != 0){
+						$('.item .more').on('click',function(){
+							if(DOM.parent('.item .more').id=='lastest_comment_list'){
+								pageNum++;
+								_self.loadComment(encodeURI(_self.tags.urlNewsComment+'?newsId='+_newsId),_self.tags.idNewsCommentWap,pageNum);
+							}else{
+								pageNum++;
+								_self.loadComment(encodeURI(_self.tags.urlHotComment+'?newsId='+_newsId),_self.tags.idHotCommentWap,pageNum);
+							}
+						});
+					}
+					// 顶
+					 _self.installDing();
+					 // 举报
+				    // KISSY.use('df-news/df-comment/report',function(S, Report){
+					  new Report();
+					// });
+
+				}
+				
+			},'json');
+			
+		},
+		look: function(){
+			var _self = this,
+			_newsId = _self.getNewsId();
+			//精彩评论	
+			_self.loadComment(encodeURI(_self.tags.urlHotComment+'?newsId='+_newsId),_self.tags.idHotCommentWap,1);
+			//最新评论
+			_self.loadComment(encodeURI(_self.tags.urlNewsComment+'?newsId='+_newsId),_self.tags.idNewsCommentWap,1);
+		
+			//显示并添加事件
+			DOM.css('#comment_list_wrap', 'display', 'block');
+			Event.detach('#comment_type a', 'click');
+			Event.on('#comment_type a', 'click', function(e){
+				var _cur = e.currentTarget;
+				
+				if(!DOM.hasClass(_cur, 'current')){
+					$('#comment_list .item').toggle();
+					$('#comment_type a').toggleClass('current');
+				}
+				return false;
+			});
+			
+		},
+		installDing:function(){
+			var _self = this;
+			Event.detach(".ding", 'click');
+			Event.on(".ding", 'click', function(e){
+				var _cur = e.currentTarget;
+				var commentId = _cur.getAttribute('data-cid'),
+				    _newsId = _self.getNewsId(),
+				    status = _cur.getAttribute('data-status'),
+				    _dingUrl = 'http://comment.home.news.cn/a/commentUp.do?commentId='+commentId+'&newsId='+_newsId;
+				if(!status) {
+					var num = $(_cur).all('em');
+					// CData.submitDing({commentId:cid,newsId:CData.getNews().newsId});
+					IO.jsonp(_dingUrl, function(res){
+						if(res.code == 200){
+							var v = num.text();
+							num.html(parseInt(v)+1);
+							_cur.setAttribute('data-status',true);
+						}
+					});
+
+				}else{new PopTip('warning','您已经顶过该评论了！');}
+			});
+		},
+		timeFormat: function(timestamp){
+			var _self = this;
+			
+			var _now = new Date(),
+				_past = new Date(Number(timestamp)),
+				_format = '';
+			
+			if(_now.getMonth() == _past.getMonth()){
+				_format += '本月';
+			}else{
+				_format += (_past.getMonth()+1) + '月';
+			}
+			
+			_format += _past.getDate() + '日 ';
+			
+			if(_past.getHours() < 10){
+				_format += '0' +  _past.getHours() + ':' ;
+			}else{
+				_format += _past.getHours() + ':' ;
+			}
+			
+			if(_past.getMinutes() < 10){
+				_format += '0' +  _past.getMinutes();
+			}else{
+				_format += _past.getMinutes();
+			}
+			
+			return _format;
+		},
+		Trim : function (str) {
+			return str.replace(/^\s*|\s*$/g,"");
+		},
+		//获取新闻ID，并组织成【站点类型-新闻ID】的形式
+		getNewsId:function()
+		{
+			var _newsId = null;
+				_uuid = DOM.attr('#news_title', 'data-uuid');
+			if(_uuid)
+			{
+				if(window.xhnc_commentOption && window.xhnc_commentOption.site)
+				{
+					_newsId = window.xhnc_commentOption.site + '-' + _uuid;
+				}
+				else
+				{
+					//如果是xuannews开头或者长度是32为的站点类型是2，否则为1
+					_newsId = ((_uuid.length==32 || _uuid.substr(0,8)=='xuannews')?'2-':'1-') + _uuid;
+				}
+			}
+			return _newsId;
+		}
+	});
+	return XuanComment;
+},{
+	requires : ['base', 'dom', 'node', 'event', 'io', 'cookie', 'xtemplate', 'gallery/pop-tip/1.0/index',  'login-intime/main', 'df-news/df-comment/report','./xuan-comment.css', './report.css']
+});

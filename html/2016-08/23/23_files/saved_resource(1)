@@ -1,0 +1,62 @@
+/*
+* description 新华网地方频道详情页中pc端与移动端视频切换
+* time 2016-06-27
+* author jyn
+*/
+
+KISSY.add('video-switch/videoSwitch',function(S,N){
+	var $ = N.all;
+	var videoSwitch = function(){
+		var _this = this;
+		var $v = $("img.edui-faked-video"),
+		    isMobile = (/iPad|iPhone|Android|Windows Phone|Nokia/).test(navigator.userAgent);	  //当前访问设备为移动端
+		//this.replaceVideoDom = function(  isWap , $videos ){}
+
+		this.init = function(){
+			if($v.length){
+				if(isMobile){	  
+					$v.each(function(v,i){
+						var $t = $(v),
+							bgURL = $t.attr("_bgURL"),
+							mp4url = $t.attr("_mp4url");
+						$t.replaceWith( _this.mobileTempFun( mp4url , bgURL ) );
+					});
+				}else{
+					$v.each(function(v,i){
+						var $t = $(v),
+							dataId = $t.attr("data-id"),
+							dataUrl = $t.attr("data-url"),
+							url = $t.attr("_url");
+						$t.replaceWith( _this.pcTempFun( dataId ,dataUrl, url ) );
+					});
+				}
+			}	
+		}
+	}
+
+	//pc端返回模板
+	videoSwitch.prototype.pcTempFun = function( dataId ,dataUrl, url ){
+		var pcTemp = '<object type="application/x-shockwave-flash" class="edui-faked-video" data-id="'+dataId+'" data-url="'+dataUrl+'" src="'+url+'" width="545" height="402" align="none" data="http://xuan.news.cn/cloudnews/FlvPlayer.swf">'+
+						'<param name="movie" value="http://xuan.news.cn/cloudnews/FlvPlayer.swf">'+
+						'<param name="bgcolor" value="#000000">'+
+						'<param name="allowFullScreen" value="true">'+
+						'<param name="allowscriptaccess" value="never">'+
+						'<param name="wmode" value="Opaque">'+
+						'<param name="play" value="true">'+
+						'<param name="loop" value="false">'+
+						'<param name="menu" value="false">'+
+						'<param name="pluginspage" value="http://www.macromedia.com/go/getflashplayer">'+
+						'<param name="flashvars" value="'+ url.split("http://xuan.news.cn/cloudnews/FlvPlayer.swf?")[1] +'">'+
+					'</object>'
+		return pcTemp;	
+	};
+			
+	//mobile返回模板
+	videoSwitch.prototype.mobileTempFun = function( mp4url , bgURL ){
+		var mobileTemp = '<video width="100%" class="has_src" controls="controls" poster="'+bgURL+'" src="'+mp4url+'" >'+
+							'your browser does not support the video tag'+
+						'</video>';
+		return mobileTemp;
+	}
+	return videoSwitch;
+},{requires:['node']})

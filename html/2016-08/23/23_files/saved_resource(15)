@@ -1,0 +1,1524 @@
+(function(win,cfg_2){
+
+	var top_domain=window._xh_st_global_obj.get_top_domain_fn(document.domain);
+
+	cfg_2.dt=document.title;
+
+	cfg_2.uu=window.location.href;
+
+	cfg_2.Listener_cfg=[
+                        //表情 待添加
+			{sel:".btn_face",data_fil_tag:"",event:["click","onclick"],filter_cookie:[],filter_related:["news_location"],filer_brower:[]},
+                        {sel:"#ping",data_tag_fil_flag:"",event:["click","onclick"],filter_cookie:[],filter_related:[],filer_brower:[]},
+                        {sel:"#function_bar .fun_trans",data_tag_fil_flag:"",event:["click","onclick"],filter_cookie:[],filter_related:["xzn"],filer_brower:[]},
+		        {sel:"#xuan_comment_publish",data_tag_fil_flag:"",event:["click","onclick"],filter_cookie:[],filter_related:["xzn"],filer_brower:[]},
+			{sel:"#xuan_updown_good",data_tag_fil_flag:"",event:["click","onclick"],filter_cookie:[],filter_related:["xzn"],filer_brower:[]},
+			{sel:"#xuan_updown_bad",data_tag_fil_flag:"",event:["click","onclick"],filter_cookie:[],filter_related:["xzn"],filer_brower:[]}
+		];
+
+	//为个人门户新加一个5分钟会话cookie字段
+	cfg_2.setting_cookie={pc:"pc",cc:"cc",si:"sessionId",un:"userName",nn:"nn"/*,pp:"pp",pp1:"pp1",pp2:"pp2"*/};
+
+	cfg_2.cookie_field=["si","cc","pc","un","nn"];
+
+	cfg_2.related_field=["dt","uu","ck","et","cb","wt","at","pt","ce","ct","th","st","ni","cf","xzn","ext"];
+
+	cfg_2.brower_field=["rf","se","os","rl","kw","bp","bv","bw"];
+
+	cfg_2.subtraction_flag=true;
+
+	cfg_2.cookie_domain_path={"pc":[top_domain,"/"],"cc":[top_domain,"/"],"last_un":[top_domain,"/"]};
+
+})(window,window._xh_st_global_obj.cfg_2);
+/** 
+* @Description:新华网大数据收集系统页面统计
+* @author:dingyu
+* @data:2015.1.8
+* @version:5.0
+*/
+
+window._xh_st_global_obj.diff_closure_connect_obj.dom_sel_mini=(function(){
+
+    var snack = /(?:[\w\-\\.#]+)+(?:\[\w+?=([\'"])?(?:\\\1|.)+?\1\])?|\*|>/ig,
+        exprClassName = /^(?:[\w\-_]+)?\.([\w\-_]+)/,
+        exprId = /^(?:[\w\-_]+)?#([\w\-_]+)/,
+        exprNodeName = /^([\w\*\-_]+)/,
+        na = [null,null];
+
+    function _find(selector, context) {
+
+        context = context || document;
+
+        var simple = /^[\w\-_#]+$/.test(selector);
+
+        if (!simple && context.querySelectorAll) {
+			
+            return realArray(context.querySelectorAll(selector));
+        }
+
+        if (selector.indexOf(',') > -1) {
+
+            var split = selector.split(/,/g), ret = [], sIndex = 0, len = split.length;
+
+            for(; sIndex < len; ++sIndex) {
+
+                ret = ret.concat( _find(split[sIndex], context) );
+
+            }
+
+            return unique(ret);
+
+        }
+
+
+        var parts = selector.match(snack),
+        part = parts.pop(),
+        id = (part.match(exprId) || na)[1],
+        className = !id && (part.match(exprClassName) || na)[1],
+        nodeName = !id && (part.match(exprNodeName) || na)[1],collection;
+
+        if (className && !nodeName && context.getElementsByClassName) {
+
+            collection = realArray(context.getElementsByClassName(className));
+
+        } else {
+
+			collection = !id && realArray(context.getElementsByTagName(nodeName || '*'));
+
+
+            if (className) {
+
+                collection = filterByAttr(collection, 'className', RegExp('(^|\\s)' + className + '(\\s|$)'));
+
+            }
+
+
+            if (id) {
+
+                var byId = context.getElementById(id);
+
+                return byId?[byId]:[];
+
+            }
+
+        }
+
+        return parts[0] && collection[0] ? filterParents(parts, collection) : collection;
+
+    };
+
+    function realArray(c) {
+
+        try {
+
+            return Array.prototype.slice.call(c);
+
+        } catch(e) {
+
+            var ret = [],
+            i = 0,
+            len = c.length;
+
+            for (; i < len; ++i) {
+
+                ret[i] = c[i];
+
+            }
+
+            return ret;
+
+        }
+
+    };
+
+    function filterParents(selectorParts, collection, direct) {
+
+        var parentSelector = selectorParts.pop();
+
+        if (parentSelector === '>') {
+
+            return filterParents(selectorParts, collection, true);
+
+        }
+
+        var ret = [],
+        r = -1,
+        id = (parentSelector.match(exprId) || na)[1],
+        className = !id && (parentSelector.match(exprClassName) || na)[1],
+        nodeName = !id && (parentSelector.match(exprNodeName) || na)[1],
+        cIndex = -1,node,parent,matches;
+
+        nodeName = nodeName && nodeName.toLowerCase();
+
+        while ( (node = collection[++cIndex]) ) {
+
+            parent = node.parentNode;
+
+            do {
+
+                matches = !nodeName || nodeName === '*' || nodeName === parent.nodeName.toLowerCase();
+		
+                matches = matches && (!id || parent.id === id);
+
+                matches = matches && (!className || RegExp('(^|\\s)' + className + '(\\s|$)').test(parent.className));
+
+                if (direct || matches) { break; }
+
+            } while ( (parent = parent.parentNode) );
+
+            if (matches) {
+
+                ret[++r] = node;
+
+            }
+
+        }
+
+        return selectorParts[0] && ret[0] ? filterParents(selectorParts, ret) : ret;
+
+    };
+
+    var unique = (function(){
+
+		var uid = +new Date();
+
+        var data = (function(){
+
+            var n = 1;
+
+            return function(elem) {
+
+
+                var cacheIndex = elem[uid],
+                nextCacheIndex = n++;
+
+                if(!cacheIndex) {
+
+                    elem[uid] = nextCacheIndex;
+
+                    return true;
+
+                }
+
+                return false;
+
+            };
+
+        })();
+
+        return function(arr) {
+
+            var length = arr.length,
+            ret = [],
+            r = -1,
+            i = 0,
+            item;
+
+            for (; i < length; ++i) {
+
+                item = arr[i];
+
+                if (data(item)){
+
+                    ret[++r] = item;
+
+                }
+
+            }
+
+            uid += 1;
+
+            return ret;
+
+        };
+
+    })();
+
+    function filterByAttr(collection, attr, regex) {
+
+        var i = -1,
+        node,
+        r = -1,
+        ret = [];
+
+        while ( (node = collection[++i]) ) {
+
+            if (regex.test(node[attr])) {
+
+                ret[++r] = node;
+
+            }
+
+        }
+
+        return ret;
+
+    };
+
+    return _find;
+
+})();
+
+
+
+
+
+
+
+(function(){
+
+	if(window._xh_st_global_obj.cfg_1){
+
+		return;
+
+	}
+
+	window._xh_st_global_obj.cfg_1={};
+
+	var head=document.head || document.getElementsByTagName("head")[0];
+
+	var meta_arr=head.getElementsByTagName("meta");
+
+	var _xh_st_global_obj_temp={};
+
+	var cfg_1_temp={};
+
+	var ext_fn_temp=function(){};
+
+	var meta_name="";
+
+	var meta_name_arr=[];
+
+	var meta_content="";
+
+	for(var i=0,len_i=meta_arr.length;i<len_i;i++){
+
+		meta_name=meta_arr[i].getAttribute("name");
+
+		if(/^xh-st-/g.test(meta_name)){
+
+			meta_content=meta_arr[i].getAttribute("content");
+
+			meta_name=meta_name.replace(/^xh-st-/g,"");
+
+			meta_name_arr=meta_name.split("-");
+
+			if("location" == meta_name){
+
+				window._xh_st_global_obj.location=meta_content;
+
+			}else if("send_date_url" == meta_name){
+
+				window._xh_st_global_obj.send_date_url=meta_content;
+
+			}else if(meta_name_arr.length == 2 && !/ext$/g.test(meta_name)){
+
+				window._xh_st_global_obj.cfg_1[meta_name_arr[1]]=meta_content;
+
+			}else{
+
+				window._xh_st_global_obj.cfg_1[meta_name_arr[1]]=new Function(meta_content);
+
+			}
+
+		}
+
+	}
+
+})();
+
+(function(win,doc,closure_connect,cfg_1,cfg_2){
+
+	//ie8以下没有trim方法  显示添加到String类中
+	if(!"".trim){
+
+		String.prototype.trim=function(){
+
+			return this.replace(/(^\s*)|(\s*$)/g,"");
+
+		};
+
+	}
+
+	//ie8以下没有indexOf方法  显示添加到Array类中
+	if(![].indexOf){
+
+		Array.prototype.indexOf = function(elt,from){
+
+			var len = this.length >>> 0;
+
+			var from = Number(arguments[1]) || 0;
+
+			from = (from < 0) ? Math.ceil(from) : Math.floor(from);
+
+			if (from < 0){
+
+				from += len;
+
+			}
+			
+			for (; from < len; from++){
+
+				if (from in this && this[from] === elt){
+
+					return from;
+
+				}
+			
+			}
+
+			return -1;
+
+		};
+
+	}
+
+	function Xh_statistic(){
+
+		this.cookie_obj=window._xh_st_global_obj.cookie_obj;
+
+		//保存未经处理的原始数据
+		this.data={};
+
+		this.default_value="-";
+
+		this.url=window._xh_st_global_obj.send_date_url || "http://da.xuan.news.cn/pc-log";
+
+		this.w=win;
+
+		this.n=win.navigator;
+
+		this.d=doc;
+
+		this.s=win.screen;
+
+		this.l=win.location;
+
+this.ua=this.n.userAgent.toLowerCase();
+
+		this.pf=this.n.platform.toLowerCase();
+
+		//
+		this.data.dt=encodeURIComponent(cfg_2.dt);
+
+		this.data.uu=cfg_2.uu;
+
+		this.data.charsets=document.characterSet || document.charset;
+
+		//分辨率
+		this.data.rl=this.s.width+'_'+this.s.height;
+
+		this.data.rf="" === this.d.referrer ? this.default_value : this.d.referrer;
+/****/
+this.data.se=this.default_value;
+
+//所搜索的关键词
+this.data.kw=this.default_value;
+/****/
+
+		//浏览器是否禁用cookie
+		this.cookie_forbidden=false;
+
+	};
+
+	Xh_statistic.prototype={
+		get_time_fn:function(){
+			return new Date().getTime();
+		},
+		/****/
+		browser_fn:function(){
+
+			var _t=this;
+			var _b={};
+			var _s;
+			(_s=_t.ua.match(/msie ([\d]+)/))?_b.n='msie':
+			(_s=_t.ua.match(/firefox\/([\d]+)/))?_b.n='firefox':
+			(_s=_t.ua.match(/chrome\/([\d]+)/))?_b.n='chrome':
+			(_s=_t.ua.match(/opera.([\d]+)/))?_b.n='opera':
+			(_s=_t.ua.match(/version\/([\d]+).*safari/))?_b.n='safari':_b.n='-';
+			(_s=_t.ua.match(/msie ([\d.]+)/))?_b.v=_s[1]:
+			(_s=_t.ua.match(/firefox\/([\d.]+)/))?_b.v=_s[1]:
+			(_s=_t.ua.match(/chrome\/([\d.]+)/))?_b.v=_s[1]:
+			(_s=_t.ua.match(/opera.([\d.]+)/))?_b.v=_s[1]:
+			(_s=_t.ua.match(/version\/([\d.]+).*safari/))?_b.v=_s[1]:_b.v='-';
+			return _b;
+			
+		},
+		os_fn:function(){
+			var _t=this;
+			var _o;
+			(_t.ua.indexOf('windows nt 6.2')>-1 || _t.ua.indexOf('windows 8')>-1)?_o='windows 8':
+			(_t.ua.indexOf('windows nt 6.1')>-1 || _t.ua.indexOf('windows 7')>-1)?_o='windows 7':
+			(_t.ua.indexOf('windows nt 6.0')>-1 || _t.ua.indexOf('windows vista')>-1)?_o='windows vista':
+			(_t.ua.indexOf('windows nt 5.1')>-1 || _t.ua.indexOf('windows xp')>-1)?_o='windows xp':
+			(_t.ua.indexOf('windows nt 5.0')>-1 || _t.ua.indexOf('windows 2000')>-1)?_o='windows 2000':
+			(_t.ua.indexOf('win 9x 4.90')>-1 || _t.ua.indexOf('windows me')>-1)?_o='windows me':
+			(_t.ua.indexOf('win98')>-1 || _t.ua.indexOf('windows 98')>-1)?_o='windows 98':
+			(_t.ua.indexOf('win95')>-1 || _t.ua.indexOf('windows 95')>-1)?_o='windows 95':
+			(_t.pf=='mac68k' || _t.pf=='macppc' || _t.pf=='macintosh')?_o='mac':
+			(_t.pf=='linux')?_o='linux':
+			(_t.pf=='x11')?_o='unix':_o='-';
+			return _o;
+		},
+		is_pc_fn:function(){
+
+			var _t=this;
+
+			var isOnPc=(/Android|webOS|iPhone|iPad|iPod|BlackBerry/ig).test(_t.ua);
+
+			if(!isOnPc){
+
+				return 1;
+
+			}else{
+
+				return 0;
+
+			}
+
+		},
+		search_engine_fn:function(){
+
+			var _t=this;
+
+			//链接键值对键名是否有例如baidu的wd字段
+			var baidu_wd_flag=false;
+
+			//百度新闻搜索页关键词键值为word    网页搜索关键词键值为wd
+			var diff_se={"baidu":"word","baidu":"wd","google":"q","soso":"query","sogou":"query","youdao":"q","haosou":"q","bing":"q"};
+
+			if(!new RegExp("(baidu.+[\?|&]word=|baidu.+[\?|&]wd=|google.+[\?|&]q=|soso.+[\?|&]query=|sogou.+[\?|&]query=|bing.+[\?|&]q=|so.+[\?|&]q=|youdao.+[\?|&]q=)([^&]*)","i").test(_t.data.rf)){
+
+				return;
+
+			}
+
+			var en_search_flag=false;
+
+			var en_keep_words="";
+
+			//截取网址域名
+			var exp=/(?:http:\/\/)?(?:(\w+)\.)?(?:(\w+)\.)(\w+)/i;
+
+			var match=exp.exec(_t.data.rf);
+
+			var origin_judge="";
+
+			var decode_str="";
+
+			for(var en_words_temp in diff_se){
+
+				//是搜索引擎    rf为空
+				if(en_words_temp == match[2]){
+
+					en_keep_words=diff_se[en_words_temp];
+
+					_t.data.se=en_words_temp;
+
+					var ret=[];
+
+					ret=(_t.data.rf.split("?")[1]).split("&");
+
+					for(var i=0; i<ret.length; i++){
+
+						if(en_keep_words == (ret[i]).split("=")[0]){
+
+							baidu_wd_flag=true;
+
+							origin_judge=(ret[i]).split("=")[1];
+
+							decode_str=decodeURIComponent(origin_judge);
+
+							if(origin_judge == decode_str){
+
+								_t.data.kw=encodeURIComponent(origin_judge);
+
+							}else{
+
+								_t.data.kw=origin_judge;
+
+							}
+
+							if(!origin_judge.trim()){
+
+								_t.data.kw=_t.default_value;
+
+							}
+
+						}
+
+					}
+
+					en_search_flag=true;
+
+					if(!baidu_wd_flag){
+
+						_t.data.se=_t.default_value;
+
+						_t.data.kw=_t.default_value;
+
+						return;
+
+					}
+
+					//_t.data.rf=_t.default_value;
+
+					//return;
+
+				}
+
+			}
+
+			//入口网址来源referer           不是搜索引擎          se  和  kw为空
+			if(!en_search_flag){
+
+				_t.data.se=_t.default_value;
+
+				_t.data.kw=_t.default_value;
+
+				return;
+
+			}
+
+		},
+		/****/
+		mix_fn:function(_receiver, _supplier){
+			//_supplier[_key]   改动了此处
+			var _t=this;
+			
+			_receiver=_receiver?_receiver:{};
+
+			if(_supplier)
+			{
+
+				for(var _key in _supplier)
+				{
+
+					// if(!_supplier.hasOwnProperty(_key)){
+
+					// 	continue;
+
+					// }
+
+					if("" === _supplier[_key]){
+
+						_receiver[_key]=_t.default_value;
+
+					}else{
+
+						_receiver[_key]=_supplier[_key];
+
+					}
+
+				}
+
+			}
+
+			return _receiver;
+
+		},
+		create_script_fn:function(_opt){
+
+			var _t=this;
+
+			var str_buffer=[];
+			
+			var create_html_tag=null;
+
+			_opt.url=_opt.url||_t.url;
+
+			_opt.data=_opt.data||_t.data;
+
+			_opt.is_encode=_opt.is_encode||false;
+
+			var _d="";
+
+			for(var _name in _opt.data){
+
+				if(_opt.is_encode){
+
+					str_buffer.push(_name+"="+encodeURIComponent(_opt.data[_name]));
+
+				}else{
+
+					str_buffer.push(_name+"="+_opt.data[_name]);
+
+				}
+
+			}
+
+			_d="&"+str_buffer.join("&");
+
+			if(!_t.cookie_forbidden){
+
+				create_html_tag=_t.d.createElement("script");
+
+				create_html_tag.setAttribute("type","text/javascript");
+
+				create_html_tag.setAttribute("src",_opt.url+"?tm="+_t.get_time_fn()+_d);
+
+				_t.d.body.appendChild(create_html_tag);
+
+				return;
+
+			}
+
+			create_html_tag=_t.d.createElement("img");
+
+			create_html_tag.setAttribute("src",_opt.url+"?tm="+_t.get_time_fn()+_d);
+
+			_t.d.body.appendChild(create_html_tag);
+
+		},
+        json_to_string_fn:function(obj){
+
+        	var _t=this;
+
+        	try{
+
+        		return window.JSON.stringify(obj);
+
+        	}catch(err){
+
+        	}
+
+			switch(typeof(obj)){
+				case 'string':
+
+				    return '"' + obj.replace(/(["\\])/g, '\\$1') + '"';
+
+				case 'array':
+
+				    return '[' + obj.map(_t.json_to_string_fn).join(',') + ']';
+
+				case 'object':
+
+				 	if(obj instanceof Array){
+
+					    var strArr = [];
+
+					    var len = obj.length;
+
+						for(var i=0; i<len; i++){
+
+						  strArr.push(_t.json_to_string_fn(obj[i]));
+
+						}
+
+						return '[' + strArr.join(',') + ']';
+
+					}else if(obj==null){
+
+						return 'null';
+
+					}else{
+
+						var string = [];
+
+						for(var property in obj){
+
+							string.push(_t.json_to_string_fn(property) + ':' + _t.json_to_string_fn(obj[property]));
+
+						}
+
+						switch (string.length){
+							case 0:
+								return '{}';
+								break;
+							case 1:
+								return '{'+string[0]+'}';
+								break;
+							default:
+								return '{'+string.join(',')+'}';
+						}
+
+					}
+
+				case 'number':
+
+					return obj;
+
+				case false:
+
+					return obj;
+
+			}
+
+		},
+		parse_json_fn:function(j){
+
+        	try{
+
+        		return window.JSON.parse(j);
+
+        	}catch(err){
+
+        	}
+
+            if (typeof j != "string") {
+
+                return j;
+
+            }
+
+            j = j.replace(/^\s*{|}\s*$/g, "");
+
+            var e = j.split(",");
+
+            var k = {};
+
+            function D(r) {
+
+                if(r.indexOf("{") == 0){
+
+                    return J._parseJson(r);
+
+                }else{
+
+                    var q = r.split(".");
+
+                    var s = window;
+
+                    for (var p = 0, o = q.length; p < o; p++) {
+
+                        var t = q[p];
+
+                        if (typeof s == "object" && t in s) {
+
+                            s = s[t];
+
+                        } else {
+
+                            return r;
+
+                        }
+
+                    }
+
+                    return s;
+
+                }
+
+            }
+
+            for (var T = 0, W = e.length; T < W; T++) {
+
+                var n = e[T];
+
+                var U = n.indexOf(":");
+
+                if (U) {
+
+                    var m = n.substring(0, U).replace(/^\s*[\'\"]?|[\"\']?\s*$/g, "");
+
+                    var B = n.substring(U + 1).replace(/^\s*/g, "");
+
+                    var l = B.charAt(0);
+
+                    if (l == "'" || l == '"') {
+
+                        do {
+
+                            var E = B.replace(/\s*$/g, "");
+
+                            if (E.substring(E.length - 1) == l) {
+
+                                break;
+
+                            } else {
+
+                                B = B + "," + e[++T];
+
+                            }
+
+                        } while (T < e.length - 1);
+
+                        B = B.replace(/^\s*[\'\"]?|[\"\']?\s*$/g, "");
+
+                    } else {
+
+                        if (l == "{") {
+
+                            do {
+
+                                var E = B.replace(/\s*$/g, "");
+
+                                if (E.substring(E.length - 1) == "}") {
+
+                                    break;
+
+                                } else {
+
+                                    B = B + "," + e[++T];
+
+                                }
+
+                            } while (T < e.length - 1);
+
+                            B = D(B);
+
+                        } else {
+
+                            if (!/^[0-9]*$/.test(B)) {
+
+                                B = D(B);
+
+                            } else {
+
+                                B = B.replace(/^\s*[\'\"]?|[\"\']?\s*$/g, "");
+
+                            }
+                        }
+                    }
+
+                    k[m] = B;
+
+                }
+
+            }
+
+            return k;
+
+        },
+    	json_to_string_fn:function(obj){
+
+        	var _t=this;
+
+        	try{
+
+        		return window.JSON.stringify(obj);
+
+        	}catch(err){
+
+        	}
+
+			switch(typeof(obj)){
+				case 'string':
+
+				    return '"' + obj.replace(/(["\\])/g, '\\$1') + '"';
+
+				case 'array':
+
+				    return '[' + obj.map(_t.json_to_string_fn).join(',') + ']';
+
+				case 'object':
+
+				 	if(obj instanceof Array){
+
+					    var strArr = [];
+
+					    var len = obj.length;
+
+						for(var i=0; i<len; i++){
+
+						  strArr.push(_t.json_to_string_fn(obj[i]));
+
+						}
+
+						return '[' + strArr.join(',') + ']';
+
+					}else if(obj==null){
+
+						return 'null';
+
+					}else{
+
+						var string = [];
+
+						for(var property in obj){
+
+							string.push(_t.json_to_string_fn(property) + ':' + _t.json_to_string_fn(obj[property]));
+
+						}
+
+						switch (string.length){
+							case 0:
+								return '{}';
+								break;
+							case 1:
+								return '{'+string[0]+'}';
+								break;
+							default:
+								return '{'+string.join(',')+'}';
+						}
+
+					}
+
+				case 'number':
+
+					return obj;
+
+				case false:
+
+					return obj;
+
+			}
+
+		},
+		del_arr_field_fn:function(_new_field,_remove_field){
+
+			var _new_field_clone=_new_field.slice(0);
+
+			if(0 === _remove_field.length){
+
+				return _new_field_clone;
+
+			}
+
+			var index_temp=-1;
+
+			for(var i=0,len_f=_remove_field.length; i<len_f; i++){
+
+				index_temp=_new_field_clone.indexOf(_remove_field[i]);
+
+				if(index_temp >= 0){
+
+				    if( isNaN(index_temp)|| index_temp>_new_field_clone.length ){
+
+				    	return false;
+
+				    }
+
+				    for(var j=0,n=0,len_s=_new_field_clone.length; j<len_s; j++){
+
+				        if(_new_field_clone[j] != _new_field_clone[index_temp]){
+
+				            _new_field_clone[n++]=_new_field_clone[j];
+
+				        }
+
+				    }
+
+		    		_new_field_clone.length-=1;
+
+		    		index_temp=-1;
+
+				}
+
+			}
+
+			return _new_field_clone;
+
+		},
+		repel_old_pc_fn:function(){
+
+			var _t=this;
+
+			var pc_cookie=_t.cookie_obj.get_fn(cfg_2.setting_cookie["pc"]);
+
+			var pc_cookie_arr=[];
+
+			var user_name=_t.cookie_obj.get_fn(cfg_2.setting_cookie["un"]).replace(/\"/ig,"");
+
+var last_un=_t.cookie_obj.get_fn("last_un");
+//pc字段   md5.f.l.N
+			pc_cookie_arr=pc_cookie.split(".");
+
+			//cookie中无pc字段或pc字段为旧版md5字符串统一当做cookie中无pc字段处理
+			if(!pc_cookie || 1 === pc_cookie_arr.length){
+
+				return _t.default_value;
+
+			}
+
+			if(!last_un && !user_name){
+
+				pc_cookie_arr[3]=parseInt(pc_cookie_arr[3])+1;
+
+				return pc_cookie_arr.join(".");
+
+			}
+			
+			if(last_un && !user_name){
+
+				_t.data["cc"]=_t.default_value;
+
+				pc_cookie_arr[3]=parseInt(pc_cookie_arr[3])+1;
+
+				return pc_cookie_arr.join(".");
+
+			}
+			
+			if(!last_un && user_name){
+
+				pc_cookie_arr[3]=parseInt(pc_cookie_arr[3])+1;
+
+				return pc_cookie_arr.join(".");
+
+			}
+
+			if(last_un && user_name && last_un === user_name){
+
+				pc_cookie_arr[3]=parseInt(pc_cookie_arr[3])+1;
+
+				return pc_cookie_arr.join(".");
+
+			}
+
+			if(last_un && user_name && last_un !== user_name){
+
+				_t.data["cc"]=_t.default_value;
+
+				return _t.default_value;
+
+			}
+
+		},
+		cookie_enabled_fn:function(){
+
+			var _t=this;
+
+			// var _check_cookie_enabled="_checkout_cookie_enabled_test";
+
+			// _t.cookie_obj.set_fn(_check_cookie_enabled,_check_cookie_enabled);
+
+			// if(_t.cookie_obj.get_fn(_check_cookie_enabled) == _check_cookie_enabled){
+
+			// 	return;
+
+			// }
+
+			if(window.navigator.cookieEnabled){
+
+				return;
+
+			}
+
+			_t.cookie_forbidden=true;
+
+			_t.url=window._xh_st_global_obj.cookie_unable_url;
+
+		},
+		render_fn:function(){
+
+			var _t=this;
+
+			var brower_cookie_temp="";
+			
+			_t.cookie_enabled_fn();
+
+			if(cfg_2.setting_cookie){
+
+				for(var setting_cookie_temp in cfg_2.setting_cookie){
+
+					brower_cookie_temp=_t.cookie_obj.get_fn(cfg_2.setting_cookie[setting_cookie_temp]);
+
+					_t.data[setting_cookie_temp]=brower_cookie_temp ? brower_cookie_temp :_t.default_value;
+
+				}
+
+			}
+
+			//覆盖pc字段
+			_t.data["pc"]=_t.repel_old_pc_fn();
+
+			if(cfg_2.Listener_cfg.length && cfg_2.subtraction_flag){
+
+				for(var b=0; b<cfg_2.Listener_cfg.length; b++){
+
+					cfg_2.Listener_cfg[b].filter_cookie=_t.del_arr_field_fn(cfg_2.cookie_field,cfg_2.Listener_cfg[b].filter_cookie);
+
+					cfg_2.Listener_cfg[b].filter_related=_t.del_arr_field_fn(cfg_2.related_field,cfg_2.Listener_cfg[b].filter_related);
+
+					cfg_2.Listener_cfg[b].filer_brower=_t.del_arr_field_fn(cfg_2.brower_field,cfg_2.Listener_cfg[b].filer_brower);
+
+				}
+
+			}
+
+/****/
+_t.data.bv=_t.browser_fn().v;
+
+_t.data.bw=_t.browser_fn().n;
+
+_t.data.os=_t.os_fn();
+
+//是来自pc端--->1  还是移动端--->0
+_t.data.bp=_t.is_pc_fn();
+
+_t.search_engine_fn();
+/****/
+
+			//将页面related_statistics对象数据存入data中
+			_t.mix_fn(_t.data,cfg_1);
+
+_t.data["ck"]=encodeURIComponent(_t.data["ck"]);
+cfg_1.ext();
+window._xh_st_global_obj.location ? window._xh_st_global_obj.ext_return_obj.location=window._xh_st_global_obj.location : null;
+_t.data["ext"]=_t.json_to_string_fn(window._xh_st_global_obj.ext_return_obj);
+
+			return _t;
+
+		}
+	};
+
+	if(!cfg_1 || closure_connect.xh_statistic || !window._xh_st_global_obj.host_white_list_flag || window.xhStatisticInfo){
+
+		return;
+
+	}
+
+	closure_connect.xh_statistic=new Xh_statistic().render_fn();
+
+})(window,document,window._xh_st_global_obj.diff_closure_connect_obj,window._xh_st_global_obj.cfg_1,window._xh_st_global_obj.cfg_2);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+(function(closure_connect,cfg_1,cfg_2){
+
+	function User_trace(_opt){
+
+        this.dom_obj_arr=_opt.dom_obj_arr || undefined;
+
+        this.event_type=_opt.event_type || ["click","onclick"];
+
+        this.execute_fn=_opt.execute_fn || this.current_fn;
+
+        this.url=_opt._url || closure_connect.xh_statistic.url;
+
+        //注册事件时的dom对象，dom_obj
+        this.dom_event_temp=null;
+
+        //过滤之后return回来的data对象值集合   但data对象集合并未发生改变
+        this.filter_cookie_arr=_opt.filter_cookie || [];
+
+        this.filter_related_arr=_opt.filter_related || [];
+
+        this.filer_brower_arr=_opt.filer_brower || [];
+
+    };
+	
+	//在不同的dom对象上发生不同事件时向php服务器端发送不同的数据
+	User_trace.prototype={
+		send_action_data_fn:function(){
+
+			var _t=this;
+
+			if(_t.dom_obj_arr && _t.execute_fn && _t.dom_obj_arr[0]){
+
+				for(var i=0,len_i=_t.dom_obj_arr.length; i<len_i; i++){
+
+					_t.add_event_fn(_t.dom_obj_arr[i],_t.event_type,function(){
+
+						_t.execute_fn.apply(_t,arguments);
+
+					});
+
+				}
+
+			}else if(_t.dom_obj_arr){
+
+				//_t.dom_obj如果该对象是单个对象不是对象数据    防止dom选择器_t.dom_sel_mini返回的不是数组情况
+				_t.add_event_fn(_t.dom_obj,_t.event_type,function(){
+
+					_t.execute_fn.apply(_t,arguments);
+
+				});
+
+			}
+
+		},
+		current_fn:function(){},
+		add_event_fn:function(_dom_temp,_event_type,_proxy_execute_fn){
+
+			var _t=this;
+
+			if(window.addEventListener){
+
+				_dom_temp.addEventListener(_event_type[0],function(){
+
+					_t.dom_event_temp=_dom_temp;
+
+					_proxy_execute_fn();
+
+				},false);
+
+			}else if(window.attachEvent){
+
+				_dom_temp.attachEvent(_event_type[1],function(){
+
+					_t.dom_event_temp=_dom_temp;
+
+					_proxy_execute_fn();
+
+				});
+
+			}
+
+		},
+        render_fn:function(){
+
+            var _t=this;
+
+            _t.send_action_data_fn();
+
+            return _t;
+
+        }
+	};
+
+	if(window._xh_st_global_obj.ga_factory){
+
+		return;
+
+	}
+
+
+	window._xh_st_global_obj.ga_factory=function(_User_trace){
+
+		var dom_cus_attr={};
+
+		//dom_selector选择器摘取dom对象
+		var dom_obj_arr=[];
+
+		var data_fil_tag_temp="";
+
+		//_user_trace闭包放入for循环中实现功能
+		for(var w=0,len_w=cfg_2.Listener_cfg.length; w<len_w; w++){
+
+			dom_obj_arr=closure_connect.dom_sel_mini(cfg_2.Listener_cfg[w].sel);
+
+			//在此从配置中取出属性过滤条件
+			data_fil_tag_temp=cfg_2.Listener_cfg[w].data_fil_tag;
+
+			//判断dom_obj_arr必须是dom对象数组
+			if(0 === dom_obj_arr.length || !(dom_obj_arr instanceof Array)){
+
+				continue;
+
+			}
+
+			if(data_fil_tag_temp){
+
+				for(var u=0,len_u=dom_obj_arr.length; u<len_u; u++){
+
+					//在此给每个dom对象都加上flag_attr表示位属性，具体的判断   留等发生点击事件时是否真有该字段再判断
+					(dom_obj_arr[u])["_data_fil_tag"]=data_fil_tag_temp;
+
+				}
+
+			}
+
+			new _User_trace({
+                    dom_obj_arr:dom_obj_arr,
+					event_type:cfg_2.Listener_cfg[w].event,
+					filter_cookie:cfg_2.Listener_cfg[w].filter_cookie,
+					filter_related:cfg_2.Listener_cfg[w].filter_related,
+					filer_brower:cfg_2.Listener_cfg[w].filer_brower,
+					execute_fn:function(){
+
+						var _t=this;
+
+						var more_data={};
+
+						var dom_event_attr=_t.dom_event_temp.getAttribute("data-event");
+
+						var foreach_cookie_value_temp="";
+
+						var data_event_obj=null;
+
+var cfg_1_ext="";
+
+cfg_1.ext();
+
+						if((_t.dom_event_temp.getAttribute("data-fil-tag") == _t.dom_event_temp["_data_fil_tag"]) && dom_event_attr){
+
+							data_event_obj=closure_connect.xh_statistic.parse_json_fn(dom_event_attr);
+
+							//过滤cookie  cookie动态取
+							for(var g=0,len_g=_t.filter_cookie_arr.length; g<len_g; g++){
+
+								foreach_cookie_value_temp=closure_connect.xh_statistic.cookie_obj.get_fn(_t.filter_cookie_arr[g]);
+
+								more_data[_t.filter_cookie_arr[g]]= "" === foreach_cookie_value_temp ? closure_connect.xh_statistic.default_value : foreach_cookie_value_temp;
+
+							}
+
+							//过滤新闻相关统计  从closure_connect.data对象中取得
+							for(var q=0,len_q=_t.filter_related_arr.length; q<len_q; q++){
+
+								//以处理过了data数据中取值为空字符是默认为  -   的情况
+								more_data[_t.filter_related_arr[q]]=closure_connect.xh_statistic.data[_t.filter_related_arr[q]];
+
+							}
+
+							//过滤浏览器信息    从closure_connect.data对象中取得
+							for(var t=0,len_t=_t.filer_brower_arr.length; t<len_t; t++){
+
+								more_data[_t.filer_brower_arr[t]]=closure_connect.xh_statistic.data[_t.filer_brower_arr[t]];
+
+							}
+
+							//事件自定义字段   如果在filer_brower_arr  filter_related_arr  filter_cookie_arr没有设置过滤掉与自定义字段重名的字段，则以自定义字段优先级高
+							for(var data_event_temp in data_event_obj){
+
+								if(data_event_temp == "expression"){
+
+									window._xh_st_global_obj.ext_return_obj.face=data_event_obj[data_event_temp];
+
+									continue;
+
+								}
+
+								more_data[data_event_temp]=data_event_obj[data_event_temp];
+
+							}
+
+window._xh_st_global_obj.location ? window._xh_st_global_obj.ext_return_obj.location=window._xh_st_global_obj.location : null;
+
+cfg_1_ext=closure_connect.xh_statistic.json_to_string_fn(window._xh_st_global_obj.ext_return_obj);
+closure_connect.xh_statistic.data["ext"]=cfg_1_ext;
+more_data["ext"]=cfg_1_ext;
+
+							closure_connect.xh_statistic.create_script_fn({url:_t.url,data:more_data,is_encode:true});
+
+						}
+
+					}
+
+			}).render_fn();
+
+		}
+
+	};
+
+	if(!cfg_1){
+
+		return;
+
+	}
+
+
+cfg_1.ext();
+window._xh_st_global_obj.location ? window._xh_st_global_obj.ext_return_obj.location=window._xh_st_global_obj.location : null;
+closure_connect.xh_statistic.data["ext"]=closure_connect.xh_statistic.json_to_string_fn(window._xh_st_global_obj.ext_return_obj);
+
+	//发送硬件基本数据
+	closure_connect.xh_statistic.create_script_fn({data:closure_connect.xh_statistic.data,is_encode:true});
+
+	//发送定制化数据(包括硬件基本数据和html标签自定义数据)
+	window._xh_st_global_obj.ga_factory(User_trace);
+
+})(window._xh_st_global_obj.diff_closure_connect_obj,window._xh_st_global_obj.cfg_1,window._xh_st_global_obj.cfg_2);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+(function(win,closure_connect,cfg_1,cfg_2){
+
+	var top_domain=window._xh_st_global_obj.current_top_domain;
+
+ 	win.jsonp_setcookies=function(_opt){
+
+var pc_temp=_opt["pc"];
+
+var cc_temp=_opt["cc"];
+
+
+ 		for(var cookie_s_temp in _opt){
+
+ 			closure_connect.xh_statistic.cookie_obj.set_fn(cookie_s_temp,_opt[cookie_s_temp]["value"],Number(_opt[cookie_s_temp]["expires"]),cfg_2.cookie_domain_path[cookie_s_temp][1],cfg_2.cookie_domain_path[cookie_s_temp][0]);
+
+ 		}
+	
+cfg_1.ext();
+//window._xh_st_global_obj.ext_return_obj对象删除face属性
+closure_connect.xh_statistic.data["ext"]=closure_connect.xh_statistic.json_to_string_fn(window._xh_st_global_obj.ext_return_obj);
+
+if(pc_temp || cc_temp){
+
+	if("news.cn" == top_domain){
+
+		//closure_connect.xh_statistic.default_value
+		closure_connect.xh_statistic.create_script_fn({
+			url:window._xh_st_global_obj.cross_domain_xinhuanet_com,
+			data:{
+				pc:(pc_temp.value || ""),
+				cc:(cc_temp ? cc_temp.value : "")
+			}
+		});
+
+	}else if("xinhuanet.com" == top_domain){
+
+		closure_connect.xh_statistic.create_script_fn({
+			url:window._xh_st_global_obj.cross_domain_news_cn,
+			data:{
+				pc:(pc_temp.value || ""),
+				cc:(cc_temp ? cc_temp.value : "")
+			}
+		});
+
+	}
+
+}
+
+	};
+
+	win.cross_domain_jsonp_callback=function(){};
+
+})(window,window._xh_st_global_obj.diff_closure_connect_obj,window._xh_st_global_obj.cfg_1,window._xh_st_global_obj.cfg_2);
+

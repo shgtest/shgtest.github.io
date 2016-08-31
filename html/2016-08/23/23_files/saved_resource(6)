@@ -1,0 +1,46 @@
+/**
+ * @author chenpeng
+ * @method 提示组件
+ * @param {Object} userConfig
+ */
+KISSY.add('gallery/pop-tip/1.0/index',function (S, Base, Node, DOM, Event) {
+    var $ = Node.all;
+	
+    function PopTip(_type, _text) {
+		
+		//默认调用初始化方法
+		this.init(_type, _text);
+    }
+
+    S.extend(PopTip, Base, {
+		init : function(_type, _text){
+			var _self = this;
+			
+			_self.render(_type, _text);
+		},
+		render: function(_type, _text){
+			var _self = this,
+				_html = '<div class="pop-tip animate bounceIn" id="pop-tip">';
+			
+            if (_type == 'warning') {
+                _html += '<div class="tip-content warning-tip">';
+            }else if(_type == 'info'){
+				_html += '<div class="tip-content info-tip">';
+			}else {
+                _html += '<div class="tip-content ok-tip">';
+            }
+            _html += '<p>' + _text + '</p></div></div>';
+			
+			if(!$('#pop-tip').length){
+				$(_html).appendTo('body');
+			}
+			
+            var _timer = setTimeout(function(){
+                $('#pop-tip').hide();
+				DOM.remove('#pop-tip');
+            }, 3000);
+		}
+	});
+
+    return PopTip;
+}, {requires:['base', 'node', 'dom', 'event', './theme/theme.css']});

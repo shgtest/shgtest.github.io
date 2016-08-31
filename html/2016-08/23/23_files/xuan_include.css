@@ -1,0 +1,226 @@
+.xuan-hd{
+	position: relative;
+	background-color: #f5f5f5; 
+	margin: 20px 0;
+}
+.xuan-hd p,.xuan-hd img{
+	margin: 0;
+	padding: 0;
+	border: 0;
+	text-indent: 0;
+} 
+.xuan-hd p.xuanIPage{
+	height: 17px;
+	line-height: 0;
+	padding: 10px 0 0 0;
+	text-align: center;
+	background: url(http://tmisc.home.news.cn/cloudnews/res/assets/img/xuan-debate/include_icon.png) no-repeat right -36px;
+}
+.xuan-hd p.xuanIPage span{
+	display: inline-block;
+	width: 8px;
+	height: 8px;
+	background-color: #e0e0e0; 
+	margin:0 5px;
+	border-radius: 50%;
+}
+.xuan-hd p.xuanIPage span:hover,.xuan-hd p.xuanIPage span.hover{
+	background-color: #80c64d;
+}
+.xuan_debate{
+	font-family: "微软雅黑";
+	padding:20px 25px;
+	overflow: hidden;
+	height: 120px;
+}
+.xuan_debate p{
+	margin: 0;
+	padding: 0;
+}
+.xuan_debate a{
+	text-decoration: none;
+}
+.xuan_debate .xDCon,.xuan_debate .xVCon,.xuan_debate .xSCon,.xuan_debate .xTCon,.xuan_debate .xQACon{
+	width: 72.3076%;
+	float: left;
+	padding: 0 0 0 8.4615%;
+}
+.xuan_debate .xDCon a.xDTag,.xuan_debate .xVCon a.xVTag,.xuan_debate .xSCon a.xSTag,.xuan_debate .xTCon a.xTTag,.xuan_debate .xQACon a.xQATag{
+	display: block;
+	float: left;
+	width: 37px;
+	height: 17px;
+	padding: 0 4px 0 0;
+	text-align: center;
+	color: #fff;
+	font-family: "微软雅黑";
+	font-size: 12px;
+	margin:0 0 0 -11.3787%;
+	background: url(http://tmisc.home.news.cn/cloudnews/res/assets/img/xuan-debate/include_icon.png) no-repeat;
+}
+.xuan_debate .xDCon a.xDTag{
+	background-position: 0 -17px;
+}
+.xuan_debate .xVCon a.xVTag{
+	background-position: 0 0;
+}
+.xuan_debate .xSCon a.xSTag{
+	background-position: 0 -63px;
+}
+.xuan_debate .xTCon a.xTTag{
+	background-position: 0 -81px;
+}
+.xuan_debate .xQACon a.xQATag{
+	background-position: 0 -99px;
+}
+.xuan_debate .xDTit,.xuan_debate .xVTit,.xuan_debate .xSTit,.xuan_debate .xTTit,.xuan_debate .xQATit{
+	padding: 0 0 15px 0;
+	border-bottom: 1px solid #d9d9d9;
+	margin-bottom: 10px;
+	line-height: 22px;
+}
+.xuan_debate .xDTit a,.xuan_debate .xVTit a,.xuan_debate .xSTit a,.xuan_debate .xTTit a,.xuan_debate .xQATit a{
+	color: #000;
+	font-size: 20px;
+	font-family: "微软雅黑";
+	line-height: 22px;
+	vertical-align: top;
+	margin-left: 10px;
+}
+.xuan_debate .xDStatus,.xuan_debate .xVStatus,.xuan_debate .xSStatus,.xuan_debate .xTStatus,.xuan_debate .xQAStatus{
+	display: inline-block;
+	height: 22px;
+	width: 45px;
+	text-align: center;
+	line-height: 22px;
+	background-color: #b3b3b3;
+	color: #fff;
+	font-size: 12px;
+	text-shadow: 0 1px 1px #999;
+}
+.xuan_debate .xDDesp{
+	line-height: 20px;
+	font-size: 12px;
+	color: #666;
+	height: 40px;
+	overflow: hidden;
+}
+.xuan_debate .xDBar{
+	height: 3px;
+	background-color: #ff7e7e;
+	margin:20px 0 10px 0;
+}
+.xuan_debate .xDBar span{
+	display: block;
+	height: 3px;
+	background-color: #58aeef;
+}
+.xuan_debate .xDPoint{
+	font-size: 14px;
+	color: #666;
+	line-height: 1em;
+}
+.xuan_debate .xDPoint span{
+	display: block;
+	width: 49%;
+	overflow: hidden;
+	white-space: nowrap;
+	-o-text-overflow: ellipsis;
+	text-overflow: ellipsis;
+}
+.xuan_debate .xDPoint span.xDPointOne{
+	float: left;
+}
+.xuan_debate .xDPoint span.xDPointTwo{
+	float: right;
+	text-align: right;
+}
+.xuan_debate .xDJoin,.xuan_debate .xVJoin,.xuan_debate .xSJoin,.xuan_debate .xTJoin,.xuan_debate .xQAJoin{
+	width: 12%;
+	float: right;
+	padding: 40px 0 0 0;
+	text-align: right;
+}
+.xuan_debate .xDJoin a,.xuan_debate .xVJoin a,.xuan_debate .xSJoin a,.xuan_debate .xTJoin a,.xuan_debate .xQAJoin a{
+	display: inline-block;
+	width: 74px;
+	height: 34px;
+	border: 2px solid #80c64d;
+	border-radius: 50%;
+	text-align: center;
+	color: #80c64d;
+	font-size: 14px;
+	padding:20px 0;
+	font-weight: bold;
+}
+.xuan_debate .xVTopic{
+	padding: 10px 0 0 0;
+	overflow: hidden;
+	line-height: 20px;
+}
+.xuan_debate .xVTopic span.xVTxt{
+	display: block;
+	width: 50%;
+	float: left;
+	font-size: 14px;
+	color: #666;
+	overflow: hidden;
+	white-space: nowrap;
+	-o-text-overflow: ellipsis;
+	text-overflow: ellipsis;
+}
+.xuan_debate .xVTopic span.xVCountO{
+	display: block;
+	height: 5px;
+	margin: 7px 0 0 0;
+	background-color: #f9a171;
+	float: right;
+}
+.xuan_debate .xVTopic span.xVCountT{
+	display: block;
+	height: 5px;
+	margin: 7px 0 0 0;
+	background-color: #fe7e7e;
+	float: right;
+}
+.xuan_debate .xSCWrap,.xuan_debate .xQACWrap{
+	height: 60px;
+}
+.xuan_debate .xTCWrap{
+	height: 60px;
+	line-height: 20px;
+	font-size: 12px;
+	color: #666; 
+	float: left;
+	height: 60px;
+	overflow: hidden;
+}
+.xuan_debate .xSDesp,.xuan_debate .xQADesp{
+	width: 75%;
+	line-height: 20px;
+	font-size: 12px;
+	color: #666; 
+	float: left;
+	height: 60px;
+	overflow: hidden;
+}
+.xuan_debate .xSQues,.xuan_debate .xQAQues{
+	width: 23%;
+	height: 60px;
+	float: right;
+	border-left: 1px solid #dadada;
+	text-align: center;
+}
+.xuan_debate .xSQuesC,.xuan_debate .xQAQuesC{
+	height: 40px;
+	font-size: 36px;
+	color: #8cc268;
+	line-height: 40px;
+}
+.xuan_debate .xSQuesT,.xuan_debate .xQAQuesT{
+	height: 20px;
+	font-size: 12px;
+	color: #666;
+	line-height: 20px;
+}
+

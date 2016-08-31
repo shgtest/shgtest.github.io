@@ -1,0 +1,113 @@
+.pop-tip {
+    z-index: 10000;
+    padding: 30px;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    margin-top: -45px;
+    margin-left: -150px;
+    background: #fff;
+    border: 1px solid #c4d4ea;
+    border-top: 5px solid #297fb8;
+}
+.pop-tip .tip-content {
+	width: 190px;
+	min-height: 28px;
+	max-height: 96px;
+    padding: 4px 0 0 50px;
+    font-size: 16px;
+	font-family: '微软雅黑';
+	line-height: 24px;
+	color: #333;
+    background: url('http://tmisc.home.news.cn/cloudnews/res/gallery/pop-tip/1.0/theme/tip-icon.png') no-repeat;
+	overflow: hidden;
+	word-wrap: break-word;
+	word-break: break-all;
+}
+.pop-tip .ok-tip{
+	background-position: 0 0;
+}
+.pop-tip .warning-tip {
+    background-position: 0 -100px;
+}
+.pop-tip .info-tip {
+    background-position: 0 -200px;
+}
+
+
+
+/*动画效果*/
+@-webkit-keyframes bounceInDown { 
+	0%{
+		opacity: 0;
+		-webkit-transform: translateY(-2000px);
+	}
+	60%{
+		opacity: 1;
+		-webkit-transform: translateY(30px);
+	}
+	80%{
+		-webkit-transform: translateY(-10px);
+	}
+	100%{
+		-webkit-transform: translateY(0);
+	}
+}
+
+@-webkit-keyframes bounceIn { 
+	0%{
+		opacity: 0;
+		-webkit-transform: scale(.3);
+	}
+	50%{
+		opacity: 1;
+		-webkit-transform: scale(1.05);
+	}
+	70%{
+		-webkit-transform: scale(.9);
+	}
+	100%{
+		-webkit-transform: scale(1);
+	}
+}
+
+@-webkit-keyframes fadeInDown { 
+	0%{
+		opacity: 0;
+		-webkit-transform: translateY(-20px);
+	}
+	100%{
+		opacity: 1;
+		-webkit-transform: translateY(0);
+	}
+}
+
+@-webkit-keyframes fadeIn { 
+	0%{
+		opacity: 0;
+	}
+	100%{
+		opacity: 1;
+	}
+}
+
+.animate {
+	-webkit-animation-duration: 2s;
+	-webkit-animation-fill-mode: both;
+	-webkit-transform: translate3D(0, 0, 0);
+	backface-visibility: hidden;
+}
+
+.animate.bounceIn {
+	-webkit-animation-name: bounceIn;
+	-webkit-animation-duration: 1s;
+}
+
+.animate.fadeInDown {
+	-webkit-animation-name: fadeInDown;
+}
+
+.animate.fadeIn {
+	-webkit-animation-name: fadeIn;
+	-webkit-animation-duration: 1s;
+}

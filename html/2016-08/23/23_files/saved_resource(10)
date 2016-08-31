@@ -1,0 +1,159 @@
+/**
+ * @author  wangdanfeng
+ * @method  分享
+ * @version 1.0
+ */
+ .xuan_share{
+    position: relative;
+    margin: 20px 0;
+    width: 250px;
+    height: 36px;
+    z-index: 2;
+ }
+ .xuan_share .share_title_wrap{
+    float: left;
+    margin-top: 10px;
+}
+.xuan_share .share_content_wrap{
+    /*float: left;*/
+    margin-left: 10px;
+    width: 293px;
+    *width: 200px;
+    height: 38px;
+}
+.xuan_share .share_content_wrap a{
+    display: inline-block;
+    width: 32px;
+    height: 32px;
+    padding-right: 10px;
+    background: url(http://tmisc.home.news.cn/cloudnews/ln-xuanzhi/subnews/images/news-detail/share-close-print.png) no-repeat ;
+}
+.xuan_share .share_content_wrap .fun{
+    background-position: 0 -10px;
+}
+.xuan_share .share_content_wrap .fun:hover{
+    background-position: 0 -60px;
+}
+.xuan_share .share_content_wrap .bds_weixin{
+    background-position: -52px -10px;
+}
+.xuan_share .share_content_wrap .bds_weixin:hover{
+    background-position: -52px -60px;
+}
+.xuan_share .share_content_wrap .bds_tsina{
+    background-position: -105px -10px;
+}
+.xuan_share .share_content_wrap .bds_tsina:hover{
+    background-position: -105px -60px;
+}
+.xuan_share .share_content_wrap .bds_qzone{
+    background-position: -158px -10px;
+}
+.xuan_share .share_content_wrap .bds_qzone:hover{
+    background-position: -158px -60px;
+}
+.xuan_share .qrcode{
+    width: 360px;
+    height: 440px;
+    border: 1px solid #d8d8d8;
+    display: none;
+    padding: 10px;
+    position: absolute;
+    z-index: 1000;
+    bottom: 45px;
+    right: 0;
+    background-color: #fff;
+}
+
+.xuan_share .qrcode .close{
+    background: url(http://tmisc.home.news.cn/cloudnews/ln-xuanzhi/subnews/images/news-detail/share-close-print.png) no-repeat ;
+    background-position: 0 -184px;
+    width: 22px;
+    height: 22px;
+    float: right;
+    cursor: pointer;
+    position: relative;
+    z-index: 2;
+}
+.xuan_share .qrcode span{
+    display: block;
+    font-size: 16px;
+    color: #000;
+}
+.xuan_share .code_table{
+	text-align: center;
+    margin: 20px 0;
+}
+.xuan_share .code_table img{
+    width: 300px;
+    height: 300px;
+}
+/*分享2*/
+.fixed_share_wrap .fixed_share{
+    width: 42px;
+    display: block;
+    /*position: relative;*/
+    z-index: 101;
+}
+.fixed_share_wrap .share_box{
+    position: relative;
+}
+.fixed_share_wrap .fixed_share .popup{
+    position: absolute;
+    z-index: -1;
+    right: 52px;
+    top: 0;
+    border: 1px solid #e0e0e0;
+    height: 42px;
+    background-color: #fff;
+    display: none;
+}
+.fixed_share_wrap .fixed_share .xuan_share{
+    margin-top: 5px;
+    margin-bottom: 0;
+    padding-left: 5px;
+}
+.fixed_share_wrap .fixed_share .fs{
+    background: url(http://tmisc.home.news.cn/cloudnews/ln-xuanzhi/subnews/images/news-detail/share-close-print.png) no-repeat ;
+    width: 42px;
+    height: 42px;
+    display: block;
+    margin-top: 10px;
+}
+.fixed_share_wrap .fixed_share .qrcode_icon{
+    background-position: 0 -110px;
+    
+}
+.fixed_share_wrap .fixed_share .share{
+    background-position: -57px -110px;
+    
+}
+.fixed_share_wrap .fixed_share .back{
+    background-position: -114px -110px;
+    
+}
+.fixed_share_wrap .qrcode2{
+    width: 120px;
+    height: 180px;
+    border: 1px solid #d8d8d8;
+    display: none;
+    padding: 10px;
+    position: absolute;
+    right: 52px;
+    bottom: 104px;
+    z-index: 10;
+    background-color: #fff;
+    font-size: 14px;
+    color: #808080;
+}
+.fixed_share_wrap .qrcode2 .dec{
+    display: block;
+    margin: 15px;
+}
+.fixed_share_wrap .code_table2{
+	text-align: center;
+}
+.fixed_share_wrap .code_table2 img{
+    width:98px;
+    height:98px;
+}

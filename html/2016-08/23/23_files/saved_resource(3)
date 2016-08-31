@@ -1,0 +1,939 @@
+/** 
+* @Description:新华网辽宁频道图片轮换器
+* @author:dingyu
+* @data:2015.4.9
+* @version:1.0
+*/ 
+
+KISSY.add("df-news/photo-gallary/2.0/changeMain",function(S,DOM,Event,IO,JSON,Anim){
+
+	function ChangeMain(_opt){
+
+		_opt=_opt || {};
+
+		this.ui_gallery=_opt.ui_gallery || DOM.get(".ui-gallery");
+
+		this.json_uri=_opt.json_uri || DOM.attr(this.ui_gallery,"data");
+
+		//
+		this.main_view_width=/*_opt.main_view_width*/DOM.width(this.ui_gallery) || 860;
+
+		this.main_view_height=_opt.main_view_height || 560;
+
+		this.two_sides_height=_opt.two_sides_height || 560;
+
+		this.main_b_slipBottom_dis=_opt.main_b_slipBottom_dis || -70;
+
+		this.h_w_scale=this.main_view_height/this.main_view_width || 560/860;
+
+		//
+		this.callback_data_arr=[];
+
+		this.img_str_mode='<img src="{{img-src}}" onload="_img_loaded_count_fn();"/>';
+
+		this.animate_isFinished_flag=true;
+
+		this.init_img_finished=false;
+
+		this.current_main_sequence=0;
+
+		this.b_anim_isFinished_protect=true;
+
+		this.b_arrow_isDisplay_flag=true;
+
+		//
+		this.css_obj_left_global={};
+
+		this.css_obj_left_global_src="";
+
+		this.css_obj_right_global={};
+
+		this.css_obj_right_global_src="";
+
+		//
+		this.pic_change=null;
+
+		//
+		this.main_view=null;
+
+		this.two_move_container=null;
+
+		this.main_aTag_arr=null;
+
+		this.main_l_arrow=null;
+
+		this.main_r_arrow=null;
+
+		this.main_b_container=null;
+
+		this.main_des_arrow=null;
+
+		this.main_b_title=null;
+
+		this.main_b_count_em=null;
+
+		this.main_b_count_span=null;
+
+		this.main_b_arrow=null;
+
+		this.main_b_summary=null;
+
+		//
+		this.left_view=null;
+
+		this.left_v_img=null;
+
+		//
+		this.right_view=null;
+
+		this.right_v_img=null;
+
+		this.main_slip_isDisplay_btn=null;
+
+		//
+		this.img_displayNone_container=null;
+
+		//图集是否渲染完毕  包括图片缓存
+		this.post_request_finish_flag=false;
+
+		//
+		this.callback_data_arr=[];
+
+	};
+	
+	S.augment(ChangeMain,{
+		main_b_msg_fn:function(_arr_idx){
+
+			var _self=this;
+
+			!_self.init_img_finished ? DOM.text(_self.main_b_count_em,_arr_idx+1) : DOM.text(_self.main_b_count_em,_arr_idx);
+
+			DOM.text(_self.main_b_title,_self.callback_data_arr[_arr_idx].title);
+
+			DOM.text(_self.main_b_summary,_self.callback_data_arr[_arr_idx].summary);
+
+		},
+		ajax_data_fn:function(){
+
+			var _self=this;
+
+
+// var _data={
+//          code:"200",
+//          content:{
+//      	"link":"https://www.baidu.com/",
+//         	"itemlist": [
+//      	{
+//  		id:"1877930",
+//  		channelId:"325",
+//  		channel:"鍥鹃泦",
+//  		title: "璧",
+//  		abstract: "2014",
+//  		clientUrl:"/ktsh/20141029/1877930.json",
+//  		shareUrl:"",
+//  		weixinUrl:"http://xuan.news.cn/cloudnews/client/res/gallery.html?clientUrl=/ktsh/20141029/1877930.json",
+//  		imgArr:[
+//  				{
+//  					small:"http://tpic.home.news.cn/xhCloudNewsPic/xhpic001/M00/96/F6/wKhTg1RQhGAEAAAAAAAAAAAAAAA431.jpg",
+//  					middle:"http://tpic.home.news.cn/xhCloudNewsPic/xhpic001/M05/96/A8/wKhTglRQhFcEAAAAAAAAAAAAAAA119.jpg",
+//  					origin:"http://tpic.home.news.cn/xhCloudNewsPic/xhpic001/M01/96/F6/wKhTg1RQhGAEAAAAAAAAAAAAAAA759.jpg",
+//  					description:"1",
+//  					isCover:"false"
+//  				}
+//  				,
+//  				{
+//  					small:"http://tpic.home.news.cn/xhCloudNewsPic/xhpic001/M00/96/A8/wKhTglRQhFgEAAAAAAAAAAAAAAA244.jpg",
+//  					middle:"http://tpic.home.news.cn/xhCloudNewsPic/xhpic001/M03/96/A8/wKhTglRQhFgEAAAAAAAAAAAAAAA488.jpg",
+//  					origin:"http://tpic.home.news.cn/xhCloudNewsPic/xhpic001/M03/96/A8/wKhTglRQhFgEAAAAAAAAAAAAAAA488.jpg",
+//  					description:"2",
+//  					isCover:"false"
+//  				}
+//  				,
+//  				{
+//  					small:"http://tpic.home.news.cn/xhCloudNewsPic/xhpic001/M00/96/F6/wKhTg1RQhGIEAAAAAAAAAAAAAAA704.jpg",
+//  					middle:"http://tpic.home.news.cn/xhCloudNewsPic/xhpic001/M05/96/A8/wKhTglRQhFkEAAAAAAAAAAAAAAA603.jpg",
+//  					origin:"http://tpic.home.news.cn/xhCloudNewsPic/xhpic001/M01/96/F6/wKhTg1RQhGIEAAAAAAAAAAAAAAA785.jpg",
+//  					description:"3",
+//  					isCover:"false"
+//  				}
+//  				,
+//  				{
+//  					small:"http://tpic.home.news.cn/xhCloudNewsPic/xhpic001/M06/96/A8/wKhTglRQhFoEAAAAAAAAAAAAAAA935.jpg",
+//  					middle:"http://tpic.home.news.cn/xhCloudNewsPic/xhpic001/M05/96/F6/wKhTg1RQhGQEAAAAAAAAAAAAAAA781.jpg",
+//  					origin:"http://tpic.home.news.cn/xhCloudNewsPic/xhpic001/M00/96/A8/wKhTglRQhFsEAAAAAAAAAAAAAAA667.jpg",
+//  					description:"4",
+//  					isCover:"false"
+//  				}
+//  				,
+//  				{
+//  					small:"http://tpic.home.news.cn/xhCloudNewsPic/xhpic001/M02/96/A8/wKhTglRQhF0EAAAAAAAAAAAAAAA740.jpg",
+//  					middle:"http://tpic.home.news.cn/xhCloudNewsPic/xhpic001/M03/96/A8/wKhTglRQhF0EAAAAAAAAAAAAAAA540.jpg",
+//  					origin:"http://tpic.home.news.cn/xhCloudNewsPic/xhpic001/M07/96/F6/wKhTg1RQhGYEAAAAAAAAAAAAAAA075.jpg",
+//  					description:"5",
+//  					isCover:"false"
+//  				}
+//  				,
+//  				{
+//  					small:"http://tpic.home.news.cn/xhCloudNewsPic/xhpic001/M06/96/A8/wKhTglRQhF4EAAAAAAAAAAAAAAA978.jpg",
+//  					middle:"http://tpic.home.news.cn/xhCloudNewsPic/xhpic001/M00/96/F6/wKhTg1RQhGcEAAAAAAAAAAAAAAA703.jpg",
+//  					origin:"http://tpic.home.news.cn/xhCloudNewsPic/xhpic001/M09/96/A8/wKhTglRQhF4EAAAAAAAAAAAAAAA565.jpg",
+//  					description:"6",
+//  					isCover:"false"
+//  				}
+//  		],
+//  		titleImg:"http://tpic.home.news.cn/xhCloudNewsPic/xhpic001/M01/96/A8/wKhTglRQhFIEAAAAAAAAAAAAAAA543.jpg",
+//  		commAmount:"0",
+//  		commentFlag:"3",
+//  		fileUuid:"a0d8424ac1dd4d19ac1800d2a52dd1ac",
+//  		typeId:"2",
+//  		showTime:"2014-10-29", 
+//  		date1:"2014-10-29 14:08",
+//  		priority:"1126827",
+//  		total: 6,
+//  		forCommas:""
+//  		}]
+//        }
+//  };
+
+
+			IO.get("http://"+window.location.host+_self.json_uri,{},function(_data){
+
+				var img_d_f=null;
+
+				var img_count=0;
+
+				if(!_data || 200 != _data.code){
+
+					return;
+
+				}
+
+				_self.gallery_link=_data.content.link;
+
+				img_d_f=document.createDocumentFragment();
+
+				S.each(_data.content.itemlist[0].imgArr,function(_value,_index){
+
+					var create_img=DOM.create(_self.img_str_mode.replace(/{{img-src}}/ig,_value.origin));
+
+					var obj_temp={};
+
+					DOM.append(create_img,img_d_f);
+
+					//
+					obj_temp.img_src=_value.origin;
+
+					obj_temp.title=_data.content.itemlist[0].title;
+
+					obj_temp.summary=_value.description;
+
+					_self.callback_data_arr.push(obj_temp);
+
+					++img_count;
+
+				});
+
+				DOM.append(img_d_f,_self.img_displayNone_container);
+
+				var setInterval_ID=setInterval(function(){
+
+						var img_dom_arr=[];
+
+						if(img_count != window._img_loaded_count){
+
+							return;
+
+						}
+
+						clearInterval(setInterval_ID);
+
+						img_dom_arr=DOM.query("img",_self.img_displayNone_container);
+
+						S.each(img_dom_arr,function(_value_,_index_){
+
+							var img_dom_width=img_dom_arr[_index_].width;
+
+							var img_dom_height=img_dom_arr[_index_].height;
+
+							_self.callback_data_arr[_index_].width=img_dom_width;
+
+							_self.callback_data_arr[_index_].height=img_dom_height;
+
+							if(img_dom_height/img_dom_width <= _self.h_w_scale && img_dom_width <= _self.main_view_width){
+
+								_self.callback_data_arr[_index_].w_greaterThan_h=true;
+
+							}else if(img_dom_height/img_dom_width < _self.h_w_scale && img_dom_width > _self.main_view_width){
+
+								_self.callback_data_arr[_index_].w_greaterThan_h=true;
+
+							}else if(img_dom_height/img_dom_width > _self.h_w_scale && img_dom_height > _self.main_view_height){
+
+								_self.callback_data_arr[_index_].w_greaterThan_h=false;
+
+							}else if(img_dom_height/img_dom_width > _self.h_w_scale && img_dom_height < _self.main_view_height){
+
+								_self.callback_data_arr[_index_].w_greaterThan_h=false;
+
+							}
+
+						});
+
+						_self.action_execute_fn();
+
+						//外部访问   改数据是否渲染完毕及图片是否完成缓存
+						_self.post_request_finish_flag=true;
+
+				},1000);
+
+			},"json");
+
+		},
+		action_execute_fn:function(){
+
+			var _self=this;
+
+			var animate_duration=1;
+
+			DOM.removeClass(_self.ui_gallery,"ui-gallery-attach");
+
+			DOM.empty(_self.ui_gallery);
+
+			var gallery_main_html='<div class="pic-change">'+
+									// '<div class="pc-cg-lImg">'+
+									// 	'<img src="http://tmisc.home.news.cn/cloudnews/ln-xuanzhi/subnews/images/photo-gallary/total-opacity.png" style="width:1px;height:1px;right:0;top:0;"/>'+
+									// 	'<img src="http://tmisc.home.news.cn/cloudnews/ln-xuanzhi/subnews/images/photo-gallary/total-opacity.png" style="width:1px;height:1px;right:0;top:0;"/>'+
+									// '</div>'+
+									// '<div class="pc-cg-lMask"></div>'+
+									// '<div class="pc-cg-rImg">'+
+									// 	'<img src="http://tmisc.home.news.cn/cloudnews/ln-xuanzhi/subnews/images/photo-gallary/total-opacity.png" style="width:1px;height:1px;left:0;top:0;"/>'+
+									// 	'<img src="http://tmisc.home.news.cn/cloudnews/ln-xuanzhi/subnews/images/photo-gallary/total-opacity.png" style="width:1px;height:1px;left:0;top:0;"/>'+
+									// '</div>'+
+									// '<div class="pc-cg-rMask"></div>'+
+									'<div class="pc-cg-main">'+
+										'<div class="cg-m-move"></div>'+
+										'<a class="cg-m-l"></a>'+
+										'<a class="cg-m-r"></a>'+
+										'<a class="cg-m-link" href="" target="_blank">图 集</a>'+
+										'<div class="cg-m-b">'+
+											'<ul>'+
+												'<li class="m-b-title left"></li>'+
+												'<li class="m-b-count left"><em>1</em>/<span></span></li>'+
+												'<li class="m-b-arrow right"></li>'+
+											'</ul>'+
+											'<div class="m-b-summary"></div>'+
+										'</div>'+
+										'<a class="main-isDisplay-btn hidden">显示</a>'+
+									'</div>'+
+								'</div>';
+
+			DOM.append(DOM.create(gallery_main_html),_self.ui_gallery);
+
+			DOM.css(_self.ui_gallery,{width:"100%",height:"560px",margin:"14px 0"});
+
+			//
+			_self.pic_change=DOM.get(".pic-change",_self.ui_gallery);
+
+			//
+			_self.main_view=DOM.get(".pc-cg-main",_self.pic_change);
+
+			_self.two_move_container=DOM.get(".cg-m-move",_self.main_view);
+
+			_self.main_aTag_arr=DOM.query("a",_self.main_view);
+
+			_self.link_href=_self.main_aTag_arr[2];
+
+			_self.main_l_arrow=_self.main_aTag_arr[0];
+
+			_self.main_r_arrow=_self.main_aTag_arr[1];
+
+			_self.main_b_container=DOM.get(".cg-m-b",_self.main_view);
+
+			_self.main_des_arrow=DOM.get(".m-b-arrow",_self.main_b_container);
+
+			_self.main_b_title=DOM.get(".m-b-title",_self.main_b_container);
+
+			_self.main_b_count_em=DOM.get("em",_self.main_b_container);
+
+			_self.main_b_count_span=DOM.get("span",_self.main_b_container);
+
+			_self.main_b_arrow=DOM.get(".m-b-arrow",_self.main_b_container);
+
+			_self.main_b_summary=DOM.get(".m-b-summary",_self.main_b_container);
+
+			//
+			// _self.left_view=DOM.get(".pc-cg-lImg",_self.pic_change);
+
+			// _self.left_v_img=DOM.query("img",_self.left_view);
+
+			//
+			// _self.right_view=DOM.get(".pc-cg-rImg",_self.pic_change);
+
+			// _self.right_v_img=DOM.query("img",_self.right_view);
+
+			_self.main_slip_isDisplay_btn=DOM.get(".main-isDisplay-btn",_self.pic_change);
+
+			// if(_self.callback_data_arr.length < 3){
+
+			// 	DOM.addClass(_self.left_view,"hidden");
+
+			// 	DOM.addClass(DOM.get(".pc-cg-lMask",_self.pic_change),"hidden");
+
+			// 	DOM.addClass(_self.right_view,"hidden");
+
+			// 	DOM.addClass(DOM.get(".pc-cg-rMask",_self.pic_change),"hidden");
+
+			// }
+
+			//
+			_self.link_href.href=_self.gallery_link;
+
+			DOM.text(_self.main_b_count_span,_self.callback_data_arr.length);
+
+			_self.current_main_sequence=1;
+
+			_self.callback_data_arr.push(_self.callback_data_arr[0]);
+
+			_self.callback_data_arr=[_self.callback_data_arr[_self.callback_data_arr.length-2]].concat(_self.callback_data_arr);
+
+			DOM.css(_self.two_move_container,{width:_self.main_view_width*_self.callback_data_arr.length+"px",left:-_self.main_view_width+"px"});
+
+			_self.img_gallary_fn();
+
+			DOM.text(_self.main_b_title,_self.callback_data_arr[_self.current_main_sequence].title);
+
+			DOM.text(_self.main_b_summary,_self.callback_data_arr[_self.current_main_sequence].summary);
+
+			Event.on(_self.main_l_arrow,"click",function(){
+
+				if(_self.callback_data_arr.length-2 == 1){
+
+					return;
+
+				}
+
+				if(!_self.animate_isFinished_flag){
+
+					return;
+
+				}
+
+				_self.animate_isFinished_flag=false;
+
+				--_self.current_main_sequence;
+
+				new Anim(_self.two_move_container,{left:-_self.current_main_sequence*_self.main_view_width+"px"},animate_duration,"easeNone",function(){
+
+					if(0 == _self.current_main_sequence){
+
+						_self.current_main_sequence=_self.callback_data_arr.length-2;
+
+						DOM.css(_self.two_move_container,{left:-_self.main_view_width*(_self.callback_data_arr.length-2)+"px"});
+
+					}
+
+					DOM.text(_self.main_b_title,_self.callback_data_arr[_self.current_main_sequence].title);
+
+					DOM.text(_self.main_b_summary,_self.callback_data_arr[_self.current_main_sequence].summary);
+
+					DOM.text(_self.main_b_count_em,_self.current_main_sequence);
+
+// _self.link_href.href="";
+
+					_self.animate_isFinished_flag=true;
+
+				}).run();
+
+				if(_self.callback_data_arr.length-2 < 3){
+
+					return;
+
+				}
+
+				// _self.gallery_left_right_fn("left",_self.callback_data_arr[(0 == _self.current_main_sequence) ? (_self.callback_data_arr.length-3) : (_self.current_main_sequence-1)],false,_self.current_main_sequence);
+
+				// _self.gallery_left_right_fn("right",_self.callback_data_arr[(0 == _self.current_main_sequence) ? (_self.callback_data_arr.length-1) : (_self.current_main_sequence+1)],false,_self.current_main_sequence+2);
+
+			});
+
+			Event.on(_self.main_r_arrow,"click",function(){
+
+				if(_self.callback_data_arr.length-2 == 1){
+
+					return;
+
+				}
+
+				if(!_self.animate_isFinished_flag){
+
+					return;
+
+				}
+
+				_self.animate_isFinished_flag=false;
+
+				++_self.current_main_sequence;
+
+				new Anim(_self.two_move_container,{left:-_self.current_main_sequence*_self.main_view_width+"px"},animate_duration,"easeNone",function(){
+
+					if(_self.callback_data_arr.length-1 == _self.current_main_sequence){
+
+						_self.current_main_sequence=1;
+
+						DOM.css(_self.two_move_container,{left:-_self.main_view_width+"px"});
+						
+					}
+
+					DOM.text(_self.main_b_title,_self.callback_data_arr[_self.current_main_sequence].title);
+
+					DOM.text(_self.main_b_summary,_self.callback_data_arr[_self.current_main_sequence].summary);
+
+					DOM.text(_self.main_b_count_em,_self.current_main_sequence);
+
+// _self.link_href.href="";
+
+					_self.animate_isFinished_flag=true;
+
+				}).run();
+
+				if(_self.callback_data_arr.length-2 < 3){
+
+					return;
+
+				}
+
+				// _self.gallery_left_right_fn("left",_self.callback_data_arr[_self.current_main_sequence],true,_self.current_main_sequence-1);
+
+				// _self.gallery_left_right_fn("right",_self.callback_data_arr[(_self.callback_data_arr.length-1 == _self.current_main_sequence) ? 2 : (_self.current_main_sequence+1)],true,_self.current_main_sequence);
+
+			});
+
+			Event.on(_self.main_view,"mouseenter mouseleave",function(_event){
+
+				if(!_self.b_anim_isFinished_protect && _self.b_arrow_isDisplay_flag){
+
+					return;
+
+				}
+
+				_self.b_anim_isFinished_protect=false;
+
+				if("mouseenter" == _event.type){
+
+					new Anim(_self.main_b_container,{bottom:0+"px"},0.2,"easeIn",function(){
+
+						_self.b_anim_isFinished_protect=true;
+
+					}).run();
+
+				}else{
+
+					new Anim(_self.main_b_container,{bottom:_self.main_b_slipBottom_dis+"px"},0.2,"easeIn",function(){
+
+						_self.b_anim_isFinished_protect=true;
+
+					}).run();
+
+				}
+
+			});
+
+			Event.on(_self.main_b_arrow,"click",function(){
+
+				DOM.addClass(_self.main_b_container,"hidden");
+
+				DOM.removeClass(_self.main_slip_isDisplay_btn,"hidden");
+
+				_self.b_arrow_isDisplay_flag=false;
+
+			});
+
+			Event.on(_self.main_slip_isDisplay_btn,"click",function(){
+
+				DOM.addClass(this,"hidden");
+
+				DOM.removeClass(_self.main_b_container,"hidden");
+
+				_self.b_arrow_isDisplay_flag=true;
+
+			});
+
+		},
+		img_gallary_fn:function(){
+
+			var _self=this;
+
+			var gallery_d_f=document.createDocumentFragment();
+
+			S.each(_self.callback_data_arr,function(_obj,_idx){
+
+				var img_temp=DOM.create('<img src="{{img-src}}" style="{{gallery-style}}">'.replace(/{{img-src}}/ig,_obj.img_src));
+
+				DOM.append(_self.gallery_main_style_fn(_obj,_idx,img_temp),gallery_d_f);
+
+			});
+
+			DOM.append(gallery_d_f,_self.two_move_container);
+
+			// _self.fuck_init_fn("left",_self.callback_data_arr[_self.current_main_sequence-1]);
+
+			// _self.fuck_init_fn("right",_self.callback_data_arr[_self.current_main_sequence+1]);
+
+		},
+		gallery_main_style_fn:function(_obj_,_idx_,_img_temp_dom){
+
+			var _self=this;
+
+			var css_pos_obj={};
+
+			var _obj=_obj_;
+
+			if(_obj.w_greaterThan_h){
+				css_pos_obj={
+					width: (_obj.width > _self.main_view_width ? _self.main_view_width : _obj.width)+"px",
+					height: Math.ceil(_obj.width > _self.main_view_width ? _obj.height*_self.main_view_width/_obj.width : _obj.height)+"px",
+					top:(_obj.width > _self.main_view_width ? (_self.main_view_height-(_obj.height*_self.main_view_width/_obj.width))/2 : (_self.main_view_height-_obj.height)/2)+"px"
+				};
+				css_pos_obj.left=_idx_*_self.main_view_width+(_obj.width > _self.main_view_width ? 0 : (_self.main_view_width-_obj.width)/2)+"px";
+				DOM.css(_img_temp_dom,css_pos_obj);
+			}else{
+				css_pos_obj={
+					width: (_obj.height > _self.main_view_height ? _self.main_view_height*_obj.width/_obj.height : _obj.width)+"px",
+					height: (_obj.height > _self.main_view_height ? _self.main_view_height : _obj.height)+"px",
+					top: (_obj.height > _self.main_view_height ? 0 : (_self.main_view_height-_obj.height)/2)+"px"
+				};
+				css_pos_obj.left=_idx_*_self.main_view_width+(_obj.height > _self.main_view_height ? (_self.main_view_width-_self.main_view_height*_obj.width/_obj.height)/2 : (_self.main_view_width-_obj.width)/2)+"px";
+				DOM.css(_img_temp_dom,css_pos_obj);
+			}
+
+			return _img_temp_dom;
+
+		},
+		// fuck_init_fn:function(_which_part,_obj){
+
+		// 	var _self=this;
+
+		// 	var css_pos_obj={};
+
+		// 	switch (_which_part){
+		// 		case "left":
+		// 			if(_obj.height > _self.two_sides_height){
+		// 				css_pos_obj={
+		// 					width: _self.two_sides_height*_obj.width/_obj.height,
+		// 					height: _self.two_sides_height+"px",
+		// 					top: 0+"px"
+		// 				};
+		// 				css_pos_obj.right=0+"px";
+		// 				DOM.attr(_self.left_v_img[0],"src",_obj.img_src);
+		// 				css_pos_obj.width+="px";
+		// 				DOM.css(_self.left_v_img[0],css_pos_obj);
+		// 			}else{
+		// 				css_pos_obj={
+		// 					width: _obj.width,
+		// 					height: _obj.height+"px",
+		// 					top: (_self.two_sides_height-_obj.height)/2+"px"
+		// 				};
+		// 				css_pos_obj.right=0+"px";
+		// 				DOM.attr(_self.left_v_img[0],"src",_obj.img_src);
+		// 				css_pos_obj.width+="px";
+		// 				DOM.css(_self.left_v_img[0],css_pos_obj);
+		// 			}
+		// 		break;
+		// 		case "right":
+		// 			if(_obj.height > _self.two_sides_height){
+		// 				css_pos_obj={
+		// 					width: _self.two_sides_height*_obj.width/_obj.height,
+		// 					height: _self.two_sides_height+"px",
+		// 					top: 0+"px"
+		// 				};
+		// 				css_pos_obj.left=0+"px";
+		// 				DOM.attr(_self.right_v_img[0],"src",_obj.img_src);
+		// 				css_pos_obj.width+="px";
+		// 				DOM.css(_self.right_v_img[0],css_pos_obj);
+		// 			}else{
+		// 				css_pos_obj={
+		// 					width: _obj.width,
+		// 					height: _obj.height+"px",
+		// 					top: (_self.two_sides_height-_obj.height)/2+"px"
+		// 				};
+		// 				css_pos_obj.left=0+"px";
+		// 				DOM.attr(_self.right_v_img[0],"src",_obj.img_src);
+		// 				css_pos_obj.width+="px";
+		// 				DOM.css(_self.right_v_img[0],css_pos_obj);
+		// 			}
+		// 		break;
+		// 	}
+		// },
+		// gallery_left_right_fn:function(_which_part,_obj_,_moveLeft_flag,_sequence){
+
+		// 	var _self=this;
+
+		// 	var animate_duration=1;
+
+		// 	var css_pos_obj={};
+
+		// 	var replenish_css_obj={};
+
+		// 	var _obj=_obj_;
+
+		// 	var left_img_init_pos=(DOM.width(document.body || document.documentElement)-1000)/2+140;
+
+		// 	var right_img_init_pos=(DOM.width(document.body || document.documentElement)-1000)/2;
+
+		// 	var replenish_pos=0;
+
+		// 	if(left_img_init_pos < 0 || right_img_init_pos < 0){
+
+		// 		return;
+
+		// 	}
+
+		// 	switch (_which_part){
+		// 		case "left":
+		// 			if(_obj.height > _self.two_sides_height){
+		// 				css_pos_obj={
+		// 					width: _self.two_sides_height*_obj.width/_obj.height,
+		// 					height: _self.two_sides_height+"px",
+		// 					top: 0+"px"
+		// 				};
+		// 				css_pos_obj.right=left_img_init_pos+"px";
+		// 				DOM.attr(_self.left_v_img[0],"src",_obj.img_src);
+		// 				css_pos_obj.width+="px";
+		// 				DOM.css(_self.left_v_img[0],css_pos_obj);
+		// 			}else{
+		// 				css_pos_obj={
+		// 					width: _obj.width,
+		// 					height: _obj.height+"px",
+		// 					top: (_self.two_sides_height-_obj.height)/2+"px"
+		// 				};
+		// 				css_pos_obj.right=left_img_init_pos+"px";
+		// 				DOM.attr(_self.left_v_img[0],"src",_obj.img_src);
+		// 				css_pos_obj.width+="px";
+		// 				DOM.css(_self.left_v_img[0],css_pos_obj);
+		// 			}
+		// 			if(_self.callback_data_arr[_sequence].height > _self.two_sides_height){
+		// 				replenish_css_obj={
+		// 					width: _self.two_sides_height*_self.callback_data_arr[_sequence].width/_self.callback_data_arr[_sequence].height,
+		// 					height: _self.two_sides_height+"px",
+		// 					top: 0+"px"
+		// 				};
+		// 				replenish_pos=(replenish_css_obj.width > left_img_init_pos) ? -(replenish_css_obj.width-left_img_init_pos) : (left_img_init_pos-replenish_css_obj.width);
+		// 				replenish_css_obj.right=(replenish_pos)+"px";
+		// 				DOM.attr(_self.left_v_img[1],"src",_self.callback_data_arr[_sequence].img_src);
+		// 				replenish_css_obj.width+="px";
+		// 				DOM.css(_self.left_v_img[1],replenish_css_obj);
+		// 			}else{
+		// 				replenish_css_obj={
+		// 					width: _self.callback_data_arr[_sequence].width,
+		// 					height: _self.callback_data_arr[_sequence].height+"px",
+		// 					top: (_self.two_sides_height-_self.callback_data_arr[_sequence].height)/2+"px"
+		// 				};
+		// 				replenish_pos=replenish_css_obj.width > left_img_init_pos ? -(replenish_css_obj.width-left_img_init_pos) : (left_img_init_pos-replenish_css_obj.width);
+		// 				replenish_css_obj.right=(replenish_pos)+"px";
+		// 				DOM.attr(_self.left_v_img[1],"src",_self.callback_data_arr[_sequence].img_src);
+		// 				replenish_css_obj.width+="px";
+		// 				DOM.css(_self.left_v_img[1],replenish_css_obj);
+		// 			}
+		// 		break;
+		// 		case "right":
+		// 			if(_obj.height > _self.two_sides_height){
+		// 				css_pos_obj={
+		// 					width: _self.two_sides_height*_obj.width/_obj.height,
+		// 					height: _self.two_sides_height+"px",
+		// 					top: 0+"px"
+		// 				};
+		// 				replenish_pos=css_pos_obj.width > right_img_init_pos ? -(css_pos_obj.width-right_img_init_pos) : (right_img_init_pos-css_pos_obj.width);
+		// 				css_pos_obj.left=(_moveLeft_flag ? right_img_init_pos : replenish_pos)+"px";
+		// 				DOM.attr(_self.right_v_img[0],"src",_obj.img_src);
+		// 				css_pos_obj.width+="px";
+		// 				DOM.css(_self.right_v_img[0],css_pos_obj);
+		// 				_self.css_obj_right_global=css_pos_obj;
+		// 				_self.css_obj_right_global_src=_obj.img_src;
+		// 			}else{
+		// 				css_pos_obj={
+		// 					width: _obj.width,
+		// 					height: _obj.height+"px",
+		// 					top: (_self.two_sides_height-_obj.height)/2+"px"
+		// 				};
+		// 				replenish_pos=css_pos_obj.width > right_img_init_pos ? -(css_pos_obj.width-right_img_init_pos) : (right_img_init_pos-css_pos_obj.width);
+		// 				css_pos_obj.left=(_moveLeft_flag ? right_img_init_pos :replenish_pos)+"px";
+		// 				DOM.attr(_self.right_v_img[0],"src",_obj.img_src);
+		// 				css_pos_obj.width+="px";
+		// 				DOM.css(_self.right_v_img[0],css_pos_obj);
+		// 				_self.css_obj_right_global=css_pos_obj;
+		// 				_self.css_obj_right_global_src=_obj.img_src;
+		// 			}
+
+		// 			if(_self.callback_data_arr[_sequence].height > _self.two_sides_height){
+		// 				replenish_css_obj={
+		// 					width: _self.two_sides_height*_self.callback_data_arr[_sequence].width/_self.callback_data_arr[_sequence].height,
+		// 					height: _self.two_sides_height+"px",
+		// 					top: 0+"px"
+		// 				};
+		// 				replenish_pos=replenish_css_obj.width > right_img_init_pos ? -(replenish_css_obj.width-right_img_init_pos) : (right_img_init_pos-replenish_css_obj.width);
+		// 				replenish_css_obj.left=(_moveLeft_flag ? replenish_pos : right_img_init_pos)+"px";
+		// 				DOM.attr(_self.right_v_img[1],"src",_self.callback_data_arr[_sequence].img_src);
+		// 				replenish_css_obj.width+="px";
+		// 				DOM.css(_self.right_v_img[1],replenish_css_obj);
+		// 			}else{
+		// 				replenish_css_obj={
+		// 					width: _self.callback_data_arr[_sequence].width,
+		// 					height: _self.callback_data_arr[_sequence].height+"px",
+		// 					top: (_self.two_sides_height-_self.callback_data_arr[_sequence].height)/2+"px"
+		// 				};
+		// 				replenish_pos=replenish_css_obj.width > right_img_init_pos ? -(replenish_css_obj.width-right_img_init_pos) : (right_img_init_pos-replenish_css_obj.width);
+		// 				replenish_css_obj.left=(_moveLeft_flag ? replenish_pos : right_img_init_pos)+"px";
+		// 				DOM.attr(_self.right_v_img[1],"src",_self.callback_data_arr[_sequence].img_src);
+		// 				replenish_css_obj.width+="px";
+		// 				DOM.css(_self.right_v_img[1],replenish_css_obj);
+		// 			}
+		// 		break;
+		// 	}
+
+		// 	switch (_which_part){
+		// 		case "left":
+		// 			if(_moveLeft_flag){
+		// 				DOM.css(_self.left_view,{right:_self.main_view_width-left_img_init_pos+"px"});
+		// 				new Anim(_self.left_view,{right:_self.main_view_width+"px"},animate_duration,"easeNone",function(){
+
+		// 					_self.animate_isFinished_flag=true;
+
+		// 				}).run();
+		// 			}else{
+		// 				DOM.css(_self.left_view,{right:_self.main_view_width+"px"});
+		// 				new Anim(_self.left_view,{right:_self.main_view_width-left_img_init_pos+"px"},animate_duration,"easeNone",function(){
+
+		// 					_self.animate_isFinished_flag=true;
+
+		// 				}).run();
+		// 			}
+		// 		break;
+		// 		case "right":
+		// 			if(_moveLeft_flag){
+		// 				DOM.css(_self.right_view,{left:_self.main_view_width+"px"});
+		// 				new Anim(_self.right_view,{left:_self.main_view_width-right_img_init_pos+"px"},animate_duration,"easeNone",function(){
+
+		// 					_self.animate_isFinished_flag=true;
+
+		// 				}).run();
+		// 			}else{
+		// 				DOM.css(_self.right_view,{left:_self.main_view_width-right_img_init_pos+"px"});
+		// 				new Anim(_self.right_view,{left:_self.main_view_width+"px"},animate_duration,"easeNone",function(){
+
+		// 					_self.animate_isFinished_flag=true;
+
+		// 				}).run();
+		// 			}
+		// 		break;
+		// 	}
+
+		// },
+		render_fn:function(){
+
+			var _self=this;
+
+			if(!_self.json_uri){
+
+				return;
+
+			}
+
+			_self.img_displayNone_container=DOM.get("#img-displayNone-container");
+
+			_self.ajax_data_fn();
+
+			return _self;
+
+		}
+	});
+	
+    return ChangeMain;
+
+}, {requires:["dom","event","ajax","json","anim"]});
+/** 
+* @Description:新华网辽宁频道图片轮换器
+* @author:dingyu
+* @data:2015.4.9
+* @version:1.0
+*/ 
+
+KISSY.add("df-news/photo-gallary/2.0/picChange",function(S,DOM,ChangeMain){
+
+	function PicChange(_opt){
+
+		_opt=_opt || {};
+
+	};
+	
+	S.augment(PicChange,{
+		render_fn:function(){
+
+			var _self=this;
+
+			var cursor_gallery_count=0;
+
+			var ui_gallery=DOM.query(".ui-gallery");
+
+			var json_uri=[];
+
+			var gallery_instance=null;
+
+			if(!ui_gallery.length){
+
+				return;
+
+			}
+
+S.each(ui_gallery,function(_value,_index){
+
+	DOM.addClass(_value,"ui-gallery-attach");
+
+});
+
+			DOM.append(DOM.create('<div id="img-displayNone-container"></div>'),document.body || document.documentElement);
+
+			gallery_instance=new ChangeMain().render_fn();
+
+			for(var i=0;i<ui_gallery.length;i++){
+
+				json_uri.push(DOM.attr(ui_gallery[i],"data"));
+
+			}	
+
+			var POST_FINISH_INTERVAL_ID=setInterval(function(){
+
+					if(!gallery_instance.post_request_finish_flag){
+
+						return;
+
+					}
+
+					if((cursor_gallery_count+1) == json_uri.length){
+
+						clearInterval(POST_FINISH_INTERVAL_ID);
+
+						return;
+
+					}
+
+					++cursor_gallery_count;
+
+					DOM.empty(gallery_instance.img_displayNone_container);
+
+					window._img_loaded_count=0;
+
+					gallery_instance=new ChangeMain({
+							ui_gallery:ui_gallery[cursor_gallery_count],
+							json_uri:json_uri[cursor_gallery_count]
+					}).render_fn();
+
+			},2000);
+
+			return _self;
+
+		}
+	});
+	
+    return PicChange;
+
+}, {requires:["dom","df-news/photo-gallary/2.0/changeMain"]});
