@@ -1,0 +1,5 @@
+BAIDU_SSP_define({"queryid" : "5384829b4375ae01","tuid" : "2457222_0","placement" : {"basic" : {"cname":"71053039_cpr","conBackEnv":1,"flowType":1,"groupId":54140,"mediumType":1,"rspFormat":1,"sellType":1,"sspId":8,"tuId":2457222,"userId":5581851}
+,"container" : {"anchoredType":1,"floated":{},"height":60,"sizeType":1,"slide":{},"width":640}
+,"fillstyle" : {}
+,"userdefine" : "","complement_type" : 7,"update" : "1473661665_0"},"extends" : {"ssph":60,"sspw":640}
+,"pdb_deliv" : {"deliv_id" : "0","deliv_des" : {},"brandad" : 0},"order_deliv" : {"deliv_id" : "0","demand_id" : "0"},"rtb_deliv" : {"deliv_id" : "0","demand_id" : "0"},"media_protect" : ""});

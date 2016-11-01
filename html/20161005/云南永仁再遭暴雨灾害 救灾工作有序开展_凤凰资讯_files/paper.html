@@ -1,0 +1,95 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!-- saved from url=(0040)http://games.ifeng.com/1403m/paper.shtml -->
+<html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+    <title></title>
+    <script type="text/javascript">
+        document.domain = "ifeng.com";
+    </script>
+
+</head>
+<body style="margin:0px;">
+
+                <script>
+                    var agent = navigator.userAgent.toLowerCase() ;
+                    var isChrome = agent.indexOf("chrome") !== -1;
+
+                    var verInfo = 0;
+                    if(isChrome)
+                    {
+                        verInfo = parseInt(agent.match(/chrome\/([\d.]+)/)[1]);
+                    }
+
+                    if(isChrome&&verInfo>=40)//是Chrome浏览器并且版本大于40
+                    {
+
+                        document.writeln("<iframe src=\"http://y1.ifengimg.com/a/2015/1113/swjx600.html?clickTag=http://games.ifeng.com/webgame/zcy/zcy903.shtml?af=3962747416\" scrolling=\"no\" frameborder=\"0\" style=\"width:300px; height:600px; border:0px;background-color=transparent;\" allowtransparency=\"true\"></iframe>");
+                    }
+                    else
+                    {
+
+                                document.writeln("<object id=\"FlashID\" classid=\"clsid:D27CDB6E-AE6D-11cf-96B8-444553540000\" width=\"300\" height=\"600\">");
+                                    document.writeln("<param name=\"movie\" value=\"http://y1.ifengimg.com/0ef71ee649d1545c/2015/0416/swjx600.swf\" />");
+                                document.writeln("<param name=\"quality\" value=\"high\" />");
+                                document.writeln("<param name=\"wmode\" value=\"opaque\" />");
+                                document.writeln("<param name=\"flashvars\" value=\"clickTag=http://games.ifeng.com/webgame/zcy/zcy903.shtml?af=3962747416\" />");
+                                document.writeln("<param name=\"swfversion\" value=\"9.0.45.0\" />");
+                                document.writeln("<param name=\"allowScriptAccess\" value=\"always\"/>");
+                                document.writeln("<param name=\"expressinstall\" value=\"Scripts/expressInstall.swf\" />");
+                                document.writeln("<!--[if !IE]>-->");
+                                document.writeln("<object type=\"application/x-shockwave-flash\" data=\"http://y1.ifengimg.com/0ef71ee649d1545c/2015/0416/swjx600.swf\" width=\"300\" height=\"600\">");
+                                    document.writeln("<!--<![endif]-->");
+                                    document.writeln("<param name=\"quality\" value=\"high\" />");
+                                document.writeln("<param name=\"wmode\" value=\"opaque\" />");
+                                document.writeln("<param name=\"flashvars\" value=\"clickTag=http://games.ifeng.com/webgame/zcy/zcy903.shtml?af=3962747416\" />");
+                                document.writeln("<param name=\"swfversion\" value=\"9.0.45.0\" />");
+                                document.writeln("<param name=\"allowScriptAccess\" value=\"always\"/>");
+                                document.writeln("<param name=\"expressinstall\" value=\"Scripts/expressInstall.swf\" />");
+                                document.writeln("<!-- 浏览器将以下替代内容显示给使用 Flash Player 6.0 和更低版本的用户。 -->");
+                                document.writeln("<div>");
+                                document.writeln("<p><a href=\"http://y1.ifengimg.com/a/2015/1113/swjx600.html\" target=\"_blank\"><img src=\"imgurl\" width=\"300\" height=\"600\" /></a></p>");
+                                document.writeln("</div>");
+                                document.writeln("<!--[if !IE]>-->");
+                                document.writeln("</object>");
+                                document.writeln("<!--<![endif]-->");
+                                document.writeln("</object>");
+                                document.writeln("");
+
+                                }
+                </script><iframe src="./swjx600.html" scrolling="no" frameborder="0" style="width:300px; height:600px; border:0px;background-color=transparent;" allowtransparency="true"></iframe>
+
+
+
+
+                <script>
+                    function addCookie(objName,objValue,objHours){//添加cookie
+                        var str = objName + "=" + escape(objValue);
+                        if(objHours > 0){//为0时不设定过期时间，浏览器关闭时cookie自动消失
+                            var date = new Date();
+                            var ms = objHours*3600*1000;
+                            date.setTime(date.getTime() + ms);
+                            str += "; expires=" + date.toGMTString()+"; path=/; domain=ifeng.com";
+                        }
+                        document.cookie = str;
+                    }
+                    function getParentUrl()
+                    {
+                        var url = "";
+                        if (top !== window)
+                        {
+                            try {
+                                url = top.location.href;
+                            }
+                            catch (e)
+                            {
+                                url = document.referrer;
+                            }
+                        }
+                        return url;
+                    }
+                    var hrefValue = getParentUrl();
+                    if(hrefValue.indexOf('games.ifeng.com') >= 0){
+                        addCookie('is_game_v','1',168);
+                    }
+                </script>
+</body></html>
